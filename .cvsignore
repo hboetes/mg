@@ -1,0 +1,6 @@
+README_PORTING
+util.h
+.cvsignore
+.mg
+GNUmakefile
+packages
