@@ -1,4 +1,4 @@
-PORTING MG AND USING LIBBSD
+# PORTING MG AND USING LIBBSD
 
 I've maintained and ported mg for quite some time now and at first it
 was easy recently it got harder and harder since it was a moving
@@ -15,29 +15,29 @@ again. While googling for solutions I ran into libbsd:
 It's a porting library for OpenBSD code! And after installing that it
 was a piece of pie to get mg ported again.
 
-PORTING TO ALL OTHER PLATFORMS
+## PORTING TO ALL OTHER PLATFORMS
 
 Okay, that was debian. Now I have to get the rest of all the previously
 suported platforms working again. All help is welcome and as always:
 Please provide patches that do not break stuff for other platforms.
 
-BUILDING MG
+## BUILDING MG
 
 So, basic instructions for building mg:
 
  - Get libbsd installed.
- - run the following commands:
+ - Run the following commands:
 
-   make
-   sudo make install
+   ```make
+   sudo make install```
 
-USING CVS
+## USING CVS
 
 This code is the cvs checkout from the OpenBSD project so if you install
 cvs you can see what I changed to port mg. Like this:
 
    cvs diff -uw
 
-ABOUT fgetln()
+## ABOUT fgetln()
 
 http://niallohiggins.com/2009/10/03/read-a-file-line-by-line-in-c-secure-fgets-idiom/
