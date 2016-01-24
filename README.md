@@ -28,15 +28,19 @@ So, basic instructions for building mg:
  - Get libbsd installed.
  - Run the following commands:
 
-   ```make
-   sudo make install```
+```
+make
+sudo make install
+```
 
 ## USING CVS
 
 This code is the cvs checkout from the OpenBSD project so if you install
 cvs you can see what I changed to port mg. Like this:
 
-   cvs diff -uw
+```
+cvs diff -uw
+```
 
 ## ABOUT fgetln()
 
