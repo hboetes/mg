@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <signal.h>
 #include <stdio.h>
+#include <wchar.h>
 
 #include "def.h"
 #include "funmap.h"
@@ -419,10 +420,25 @@ findcolpos(const struct buffer *bp, const struct line *lp, int lo)
 			) {
 			col |= 0x07;
 			col++;
-		} else if (ISCTRL(c) != FALSE)
+		} else if (ISCTRL(c) != FALSE) {
 			col += 2;
-		else if (isprint(c)) {
+		} else if (isprint(c)) {
 			col++;
+		} else if (bp->b_flag & BFSHOWWIDE) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
+			                          llength(lp) - i, &mbs);
+			int width = -1;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				col += width;
+				i += (consumed - 1);
+			} else {
+				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+			}
 		} else {
 			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
 		}

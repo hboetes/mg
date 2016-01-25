@@ -114,6 +114,7 @@ static struct funmap functnames[] = {
 	{bufferinsert, "insert-buffer",},
 	{fileinsert, "insert-file",},
 	{fillword, "insert-with-wrap",},
+	{insert_char, "insert-char",},
 	{backisearch, "isearch-backward",},
 	{forwisearch, "isearch-forward",},
 	{joinline, "join-line",},
@@ -213,6 +214,7 @@ static struct funmap functnames[] = {
 	{togglevisiblebell, "visible-bell",},
 	{tagsvisit, "visit-tags-table",},
 	{showcpos, "what-cursor-position",},
+	{show_wide_mode, "show-wide-mode",},
 	{filewrite, "write-file",},
 	{yank, "yank",},
 	{NULL, NULL,}

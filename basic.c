@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <wchar.h>
 
 #include "def.h"
 
@@ -269,12 +270,25 @@ setgoal(void)
 int
 getgoal(struct line *dlp)
 {
-	int c, i, col = 0;
+	return getbyteofcol(dlp, 0, curgoal);
+}
+
+/*
+ * Return the byte offset within lp that is targetcol columns beyond
+ * startbyte
+ */
+int
+getbyteofcol(const struct line *lp, const size_t startbyte,
+             const size_t targetcol)
+{
+	int c;
+	size_t i, col = 0;
 	char tmp[5];
+	size_t advance_by = 1;
 
-
-	for (i = 0; i < llength(dlp); i++) {
-		c = lgetc(dlp, i);
+	for (i = startbyte; i < llength(lp); i += advance_by) {
+		advance_by = 1;
+		c = lgetc(lp, i);
 		if (c == '\t'
 #ifdef	NOTAB
 		    && !(curbp->b_flag & BFNOTAB)
@@ -284,12 +298,27 @@ getgoal(struct line *dlp)
 			col++;
 		} else if (ISCTRL(c) != FALSE) {
 			col += 2;
-		} else if (isprint(c))
+		} else if (isprint(c)) {
 			col++;
-		else {
+		} else if (curbp->b_flag & BFSHOWWIDE) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
+			                          llength(lp) - i, &mbs);
+			int width = -1;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				col += width;
+				advance_by = consumed;
+			} else {
+				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+			}
+		} else {
 			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
 		}
-		if (col > curgoal)
+		if (col > targetcol)
 			break;
 	}
 	return (i);

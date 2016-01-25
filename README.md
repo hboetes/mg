@@ -1,49 +1,50 @@
-# PORTING MG AND USING LIBBSD
+# mg with wide display support.
 
-I've maintained and ported mg for quite some time now and at first it
-was easy recently it got harder and harder since it was a moving
-target. Especially the inclusion of some system specific libraries since
-about 2 years ago made it too much of an effort for my humble coding
-skills.
-
-So recently Jasper Lievisse Adriaanse asked me to try it again and I
-restarted working on the project and ran into exactly the same problems
-again. While googling for solutions I ran into libbsd:
-
-  http://libbsd.freedesktop.org/wiki/
-
-It's a porting library for OpenBSD code! And after installing that it
-was a piece of pie to get mg ported again.
-
-## PORTING TO ALL OTHER PLATFORMS
-
-Okay, that was debian. Now I have to get the rest of all the previously
-suported platforms working again. All help is welcome and as always:
-Please provide patches that do not break stuff for other platforms.
-
-## BUILDING MG
-
-So, basic instructions for building mg:
-
- - Get libbsd installed.
- - Run the following commands:
+I just received this amazing patch from S. Giles. For those impatient
+people: check it out (tihihi) and add this line to your `.mg`
 
 ```
-make
-sudo make install
+set-default-mode "wide"
 ```
 
-## USING CVS
+## Introduction by S. Giles
 
-This code is the cvs checkout from the OpenBSD project so if you install
-cvs you can see what I changed to port mg. Like this:
+Hi,
 
-```
-cvs diff -uw
-```
+I've got a patch that allows mg to display wide characters, if you're
+interested.
 
-## ABOUT fgetln()
+It can be turned on by show-wide-mode (better name welcome), and is
+fairly limited in regard to what types of wide characters are
+displayed. Everything goes through mbrtowc(3), so you get exactly one
+supported encoding: whatever LC_* says. Everything else is displayed
+as octal escape sequences (as normal current behavior). Motion is
+still on a byte level, so multibyte characters are slow to travel
+through, and you can insert bytes in the middle of them (which works
+fine). A limited version of insert-char is also included, which works
+through wchar_t, so that on any system with __STDC_ISO_10646__ set,
+inserting unicode codepoints by number is possible.
 
-Incase you are wondering about that deprecation warning, here is a nice explanation about why it is hard to fix:
+It also fixes some odd bugs related to wide character display and
+extended lines. For example: in a file with enough wide characters
+(such as ＡＢＣ) to make a line extend far (say, 200 characters on an
+80-wide display), moving to the right one character at a time will (in
+20160118) corrupt the display, then eventually segfault, because
+vtpute doesn't perform the same octal expansion as vtputc and the
+columns get out of sync. This patch makes display.c aware of the
+possibility that the bytes and glyphs of the buffers aren't 1:1, so
+protects against that.
 
-  http://niallohiggins.com/2009/10/03/read-a-file-line-by-line-in-c-secure-fgets-idiom/
+That said, wide character support complicates a lot of already
+complicated logic (for example, vtputs) and relies on wchar_t for
+almost everything, adding some unescapable overhead.
+
+If you want to take this patch, please do so. If you think it's too
+ugly or not useful, that's also fine.  Let me know if you want me to
+rewrite parts of it (or if you see any bugs) or if there are style
+conventions I didn't follow. It applies cleanly with patch -i, please
+forgive the git-isms.
+
+(And, of course, many thanks for your work in maintaining the port.)
+
+S. Gilles

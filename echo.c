@@ -844,9 +844,11 @@ ewprintf(const char *fmt, ...)
  * %k prints the name of the current key (and takes no arguments).
  * %d prints a decimal integer
  * %o prints an octal integer
+ * %x prints a hexadecimal integer
  * %p prints a pointer
  * %s prints a string
  * %ld prints a long word
+ * %lx prints a hexadecimal long word
  * Anything else is echoed verbatim
  */
 static void
@@ -885,6 +887,10 @@ eformat(const char *fp, va_list ap)
 				eputi(va_arg(ap, int), 8);
 				break;
 
+			case 'x':
+				eputi(va_arg(ap, int), 16);
+				break;
+
 			case 'p':
 				snprintf(tmp, sizeof(tmp), "%p",
 				    va_arg(ap, void *));
@@ -901,6 +907,9 @@ eformat(const char *fp, va_list ap)
 				switch (c) {
 				case 'd':
 					eputl(va_arg(ap, long), 10);
+					break;
+				case 'x':
+					eputl(va_arg(ap, long), 16);
 					break;
 				default:
 					eputc(c);
@@ -939,6 +948,7 @@ static void
 eputl(long l, int r)
 {
 	long	 q;
+	int	 c;
 
 	if (l < 0) {
 		eputc('-');
@@ -946,7 +956,10 @@ eputl(long l, int r)
 	}
 	if ((q = l / r) != 0)
 		eputl(q, r);
-	eputc((int)(l % r) + '0');
+	c = (int)(l % r) + '0';
+	if (c > '9')
+		c += 'a' - '9' - 1;
+	eputc(c);
 }
 
 /*

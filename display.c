@@ -7,7 +7,7 @@
  * redisplay system knows almost nothing about the editing
  * process; the editing functions do, however, set some
  * hints to eliminate a lot of the grinding. There is more
- * that can be done; the "vtputc" interface is a real
+ * that can be done; the "vtputs" interface is a real
  * pig.
  */
 
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <term.h>
+#include <wchar.h>
 
 #include "def.h"
 #include "kbd.h"
@@ -52,9 +53,8 @@ struct score {
 };
 
 void	vtmove(int, int);
-void	vtputc(int);
 void	vtpute(int);
-int	vtputs(const char *);
+int	vtputs(const char *, size_t, size_t);
 void	vteeol(void);
 void	updext(int, int);
 void	modeline(struct mgwin *, int);
@@ -216,8 +216,8 @@ vtresize(int force, int newrow, int newcol)
 	}
 	if (rowchanged || colchanged || first_run) {
 		for (i = 0; i < 2 * (newrow - 1); i++)
-			TRYREALLOC(video[i].v_text, newcol);
-		TRYREALLOC(blanks.v_text, newcol);
+			TRYREALLOC(video[i].v_text, newcol * MB_CUR_MAX);
+		TRYREALLOC(blanks.v_text, newcol * MB_CUR_MAX);
 	}
 
 	nrow = newrow;
@@ -287,7 +287,7 @@ vttidy(void)
  * Move the virtual cursor to an origin
  * 0 spot on the virtual display screen. I could
  * store the column as a character pointer to the spot
- * on the line, which would make "vtputc" a little bit
+ * on the line, which would make "vtputs" a little bit
  * more efficient. No checking for errors.
  */
 void
@@ -295,82 +295,6 @@ vtmove(int row, int col)
 {
 	vtrow = row;
 	vtcol = col;
-}
-
-/*
- * Write a character to the virtual display,
- * dealing with long lines and the display of unprintable
- * things like control characters. Also expand tabs every 8
- * columns. This code only puts printing characters into
- * the virtual display image. Special care must be taken when
- * expanding tabs. On a screen whose width is not a multiple
- * of 8, it is possible for the virtual cursor to hit the
- * right margin before the next tab stop is reached. This
- * makes the tab code loop if you are not careful.
- * Three guesses how we found this.
- */
-void
-vtputc(int c)
-{
-	struct video	*vp;
-
-	c &= 0xff;
-
-	vp = vscreen[vtrow];
-	if (vtcol >= ncol)
-		vp->v_text[ncol - 1] = '$';
-	else if (c == '\t'
-#ifdef	NOTAB
-	    && !(curbp->b_flag & BFNOTAB)
-#endif
-	    ) {
-		do {
-			vtputc(' ');
-		} while (vtcol < ncol && (vtcol & 0x07) != 0);
-	} else if (ISCTRL(c)) {
-		vtputc('^');
-		vtputc(CCHR(c));
-	} else if (isprint(c))
-		vp->v_text[vtcol++] = c;
-	else {
-		char bf[5];
-
-		snprintf(bf, sizeof(bf), "\\%o", c);
-		vtputs(bf);
-	}
-}
-
-/*
- * Put a character to the virtual screen in an extended line.  If we are not
- * yet on left edge, don't print it yet.  Check for overflow on the right
- * margin.
- */
-void
-vtpute(int c)
-{
-	struct video *vp;
-
-	c &= 0xff;
-
-	vp = vscreen[vtrow];
-	if (vtcol >= ncol)
-		vp->v_text[ncol - 1] = '$';
-	else if (c == '\t'
-#ifdef	NOTAB
-	    && !(curbp->b_flag & BFNOTAB)
-#endif
-	    ) {
-		do {
-			vtpute(' ');
-		} while (((vtcol + lbound) & 0x07) != 0 && vtcol < ncol);
-	} else if (ISCTRL(c) != FALSE) {
-		vtpute('^');
-		vtpute(CCHR(c));
-	} else {
-		if (vtcol >= 0)
-			vp->v_text[vtcol] = c;
-		++vtcol;
-	}
 }
 
 /*
@@ -384,7 +308,7 @@ vteeol(void)
 	struct video *vp;
 
 	vp = vscreen[vtrow];
-	while (vtcol < ncol)
+	while (vtcol < ncol * MB_CUR_MAX)
 		vp->v_text[vtcol++] = ' ';
 }
 
@@ -404,7 +328,7 @@ update(int modelinecolor)
 	struct mgwin	*wp;
 	struct video	*vp1;
 	struct video	*vp2;
-	int	 c, i, j;
+	int	 c, i;
 	int	 hflag;
 	int	 currow, curcol;
 	int	 offs, size;
@@ -479,8 +403,9 @@ update(int modelinecolor)
 			vscreen[i]->v_color = CTEXT;
 			vscreen[i]->v_flag |= (VFCHG | VFHBAD);
 			vtmove(i, 0);
-			for (j = 0; j < llength(lp); ++j)
-				vtputc(lgetc(lp, j));
+			if (llength(lp)) {
+				vtputs(lp->l_text, llength(lp), 0);
+			}
 			vteeol();
 		} else if ((wp->w_rflag & (WFEDIT | WFFULL)) != 0) {
 			hflag = TRUE;
@@ -489,8 +414,10 @@ update(int modelinecolor)
 				vscreen[i]->v_flag |= (VFCHG | VFHBAD);
 				vtmove(i, 0);
 				if (lp != wp->w_bufp->b_headp) {
-					for (j = 0; j < llength(lp); ++j)
-						vtputc(lgetc(lp, j));
+					if (llength(lp)) {
+						vtputs(lp->l_text, llength(lp),
+						    0);
+					}
 					lp = lforw(lp);
 				}
 				vteeol();
@@ -511,7 +438,8 @@ update(int modelinecolor)
 	curcol = 0;
 	i = 0;
 	while (i < curwp->w_doto) {
-		c = lgetc(lp, i++);
+		char tmp[5];
+		c = lgetc(lp, i);
 		if (c == '\t'
 #ifdef	NOTAB
 		    && !(curbp->b_flag & BFNOTAB)
@@ -521,14 +449,29 @@ update(int modelinecolor)
 			curcol++;
 		} else if (ISCTRL(c) != FALSE)
 			curcol += 2;
-		else if (isprint(c))
+		else if (isprint(c)) {
 			curcol++;
-		else {
-			char bf[5];
-
-			snprintf(bf, sizeof(bf), "\\%o", c);
-			curcol += strlen(bf);
+		} else if (curbp->b_flag & BFSHOWWIDE) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
+			                          llength(lp) - i, &mbs);
+			int width = -1;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				curcol += width;
+				i += (consumed - 1);
+			} else {
+				snprintf(tmp, sizeof(tmp), "\\%o", c);
+				curcol += strlen(tmp);
+			}
+		} else {
+			snprintf(tmp, sizeof(tmp), "\\%o", c);
+			curcol += strlen(tmp);
 		}
+		i++;
 	}
 	if (curcol >= ncol - 1) {	/* extended line. */
 		/* flag we are extended and changed */
@@ -552,8 +495,10 @@ update(int modelinecolor)
 				if ((wp != curwp) || (lp != wp->w_dotp) ||
 				    (curcol < ncol - 1)) {
 					vtmove(i, 0);
-					for (j = 0; j < llength(lp); ++j)
-						vtputc(lgetc(lp, j));
+					if (llength(lp)) {
+						vtputs(lp->l_text, llength(lp),
+						    0);
+					}
 					vteeol();
 					/* this line no longer is extended */
 					vscreen[i]->v_flag &= ~VFEXT;
@@ -655,7 +600,7 @@ ucopy(struct video *vvp, struct video *pvp)
 	pvp->v_hash = vvp->v_hash;
 	pvp->v_cost = vvp->v_cost;
 	pvp->v_color = vvp->v_color;
-	bcopy(vvp->v_text, pvp->v_text, ncol);
+	bcopy(vvp->v_text, pvp->v_text, ncol * MB_CUR_MAX);
 }
 
 /*
@@ -667,7 +612,8 @@ void
 updext(int currow, int curcol)
 {
 	struct line	*lp;			/* pointer to current line */
-	int	 j;			/* index into line */
+	size_t startbyte;
+	size_t extent;
 
 	if (ncol < 2)
 		return;
@@ -677,15 +623,16 @@ updext(int currow, int curcol)
 	 * (force cursor into middle half of screen)
 	 */
 	lbound = curcol - (curcol % (ncol >> 1)) - (ncol >> 2);
+	startbyte = getbyteofcol(curwp->w_dotp, 0, lbound + 1);
+	extent = getbyteofcol(curwp->w_dotp, startbyte, ncol) - startbyte;
 
 	/*
 	 * scan through the line outputing characters to the virtual screen
 	 * once we reach the left edge
 	 */
-	vtmove(currow, -lbound);		/* start scanning offscreen */
+	vtmove(currow, 1);		/* leave room for '$' */
 	lp = curwp->w_dotp;			/* line to output */
-	for (j = 0; j < llength(lp); ++j)	/* until the end-of-line */
-		vtpute(lgetc(lp, j));
+	vtputs(lp->l_text + startbyte, extent, 1);
 	vteeol();				/* truncate the virtual line */
 	vscreen[currow]->v_text[0] = '$';	/* and put a '$' in column 1 */
 }
@@ -702,12 +649,35 @@ updext(int currow, int curcol)
 void
 uline(int row, struct video *vvp, struct video *pvp)
 {
-	char  *cp1;
-	char  *cp2;
-	char  *cp3;
-	char  *cp4;
-	char  *cp5;
+	char  *cp1; /* Pointer to the start of dirty region */
+	char  *cp2; /* pvp's counterpart for cp1 */
+	char  *cp3; /* Pointer to end of dirty region */
+	char  *cp4; /* pvp's counterpart for cp3 */
+	char  *cp5; /* After this, within dirty region, all is ' ' */
+	char  *mbcounter;
 	int    nbflag;
+	int    startcol; /* onscreen column matching cp1 */
+	char  *lastbyte; /* byte which handles last onscreen column  */
+	int    seencols = 0;
+	mbstate_t mbs = { 0 };
+	wchar_t wc = 0;
+
+	lastbyte = vvp->v_text;
+	while (seencols < ncol && *lastbyte) {
+		size_t consumed = mbrtowc(&wc, lastbyte,
+		    (vvp->v_text + ncol * MB_CUR_MAX - lastbyte), &mbs);
+		if (consumed < (size_t) -2) {
+			lastbyte += consumed;
+			seencols += wcwidth(wc);
+		} else {
+			lastbyte++;
+			seencols++;
+			memset(&mbs, 0, sizeof mbs);
+		}
+	}
+	if (lastbyte - vvp->v_text < ncol) {
+		lastbyte = &vvp->v_text[ncol];
+	}
 
 	if (vvp->v_color != pvp->v_color) {	/* Wrong color, do a	 */
 		ttmove(row, 0);			/* full redraw.		 */
@@ -723,11 +693,12 @@ uline(int row, struct video *vvp, struct video *pvp)
 		 * putting the invisible glitch character on the next line.
 		 * (Hazeltine executive 80 model 30)
 		 */
-		cp2 = &vvp->v_text[ncol - (magic_cookie_glitch >= 0 ?
-		    (magic_cookie_glitch != 0 ? magic_cookie_glitch : 1) : 0)];
+		cp2 = lastbyte -
+		    (magic_cookie_glitch >= 0 ? (magic_cookie_glitch != 0 ?
+		    magic_cookie_glitch : 1) : 0);
 #else
 		cp1 = &vvp->v_text[0];
-		cp2 = &vvp->v_text[ncol];
+		cp2 = lastbyte;
 #endif
 		while (cp1 != cp2) {
 			ttputc(*cp1++);
@@ -738,20 +709,30 @@ uline(int row, struct video *vvp, struct video *pvp)
 	}
 	cp1 = &vvp->v_text[0];		/* Compute left match.	 */
 	cp2 = &pvp->v_text[0];
-	while (cp1 != &vvp->v_text[ncol] && cp1[0] == cp2[0]) {
+	while (cp1 != lastbyte && cp1[0] == cp2[0]) {
 		++cp1;
 		++cp2;
 	}
-	if (cp1 == &vvp->v_text[ncol])	/* All equal.		 */
+	if (cp1 == lastbyte)	/* All equal.		 */
 		return;
+	while (cp1 != vvp->v_text && !isprint(*cp1) &&
+	       mbrtowc(&wc, cp1, (lastbyte - cp1), &mbs) >= (size_t) -2) {
+		--cp1;
+		--cp2;
+	}
 	nbflag = FALSE;
-	cp3 = &vvp->v_text[ncol];	/* Compute right match.  */
-	cp4 = &pvp->v_text[ncol];
+	cp3 = lastbyte;	/* Compute right match.  */
+	cp4 = &pvp->v_text[lastbyte - vvp->v_text];
 	while (cp3[-1] == cp4[-1]) {
 		--cp3;
 		--cp4;
 		if (cp3[0] != ' ')	/* Note non-blanks in	 */
 			nbflag = TRUE;	/* the right match.	 */
+	}
+	while (cp3 != lastbyte && !isprint(*cp3) &&
+	        mbrtowc(&wc, cp3, (lastbyte - cp3), &mbs) >= (size_t) -2) {
+		++cp3;
+		++cp4;
 	}
 	cp5 = cp3;			/* Is erase good?	 */
 	if (nbflag == FALSE && vvp->v_color == CTEXT) {
@@ -762,13 +743,27 @@ uline(int row, struct video *vvp, struct video *pvp)
 			cp5 = cp3;
 	}
 	/* Alcyon hack */
-	ttmove(row, (int) (cp1 - &vvp->v_text[0]));
+	startcol = 0;
+	mbcounter = vvp->v_text;
+	while ((cp1 - mbcounter) > 0) {
+		size_t consumed = mbrtowc(&wc, mbcounter, (cp1 - mbcounter),
+		                          &mbs);
+		if (consumed < (size_t) -2) {
+			mbcounter += consumed;
+			startcol += wcwidth(wc);
+		} else {
+			mbcounter++;
+			startcol++;
+			memset(&mbs, 0, sizeof mbs);
+		}
+	}
+	ttmove(row, startcol);
 #ifdef	STANDOUT_GLITCH
 	if (vvp->v_color != CTEXT && magic_cookie_glitch > 0) {
 		if (cp1 < &vvp->v_text[magic_cookie_glitch])
 			cp1 = &vvp->v_text[magic_cookie_glitch];
-		if (cp5 > &vvp->v_text[ncol - magic_cookie_glitch])
-			cp5 = &vvp->v_text[ncol - magic_cookie_glitch];
+		if (cp5 > lastbyte - magic_cookie_glitch)
+			cp5 = lastbyte - magic_cookie_glitch;
 	} else if (magic_cookie_glitch < 0)
 #endif
 		ttcolor(vvp->v_color);
@@ -801,46 +796,39 @@ modeline(struct mgwin *wp, int modelinecolor)
 	vscreen[n]->v_flag |= (VFCHG | VFHBAD);	/* Recompute, display.	 */
 	vtmove(n, 0);				/* Seek to right line.	 */
 	bp = wp->w_bufp;
-	vtputc('-');
-	vtputc('-');
+	n = vtputs("--", 0, 0);
 	if ((bp->b_flag & BFREADONLY) != 0) {
-		vtputc('%');
+		n += vtputs("%", 0, n);
 		if ((bp->b_flag & BFCHG) != 0)
-			vtputc('*');
+			n += vtputs("*", 0, n);
 		else
-			vtputc('%');
+			n += vtputs("%", 0, n);
 	} else if ((bp->b_flag & BFCHG) != 0) {	/* "*" if changed.	 */
-		vtputc('*');
-		vtputc('*');
+		n += vtputs("**", 0, n);
 	} else {
-		vtputc('-');
-		vtputc('-');
+		n += vtputs("--", 0, n);
 	}
-	vtputc('-');
+	n += vtputs("-", 0, n);
 	n = 5;
-	n += vtputs("Mg: ");
+	n += vtputs("Mg: ", 0, n);
 	if (bp->b_bname[0] != '\0')
-		n += vtputs(&(bp->b_bname[0]));
+		n += vtputs(&(bp->b_bname[0]), 0, n);
 	while (n < 42) {			/* Pad out with blanks.	 */
-		vtputc(' ');
-		++n;
+		n += vtputs(" ", 0, n);
 	}
-	vtputc('(');
-	++n;
+	n += vtputs("(", 0, n);
 	for (md = 0; ; ) {
-		n += vtputs(bp->b_modes[md]->p_name);
+		n += vtputs(bp->b_modes[md]->p_name, 0, n);
 		if (++md > bp->b_nmodes)
 			break;
-		vtputc('-');
-		++n;
+		n += vtputs("-", 0, n);
 	}
 	/* XXX These should eventually move to a real mode */
 	if (macrodef == TRUE)
-		n += vtputs("-def");
+		n += vtputs("-def", 0, n);
 	if (globalwd == TRUE)
-		n += vtputs("-gwd");
-	vtputc(')');
-	++n;
+		n += vtputs("-gwd", 0, n);
+	n += vtputs(")", 0, n);
 
 	if (linenos && colnos)
 		len = snprintf(sl, sizeof(sl), "--L%d--C%d", wp->w_dotline,
@@ -850,27 +838,124 @@ modeline(struct mgwin *wp, int modelinecolor)
 	else if (colnos)
 		len = snprintf(sl, sizeof(sl), "--C%d", getcolpos(wp));
 	if ((linenos || colnos) && len < sizeof(sl) && len != -1)
-		n += vtputs(sl);
+		n += vtputs(sl, 0, n);
 
 	while (n < ncol) {			/* Pad out.		 */
-		vtputc('-');
-		++n;
+		n += vtputs("-", 0, n);
 	}
 }
 
 /*
- * Output a string to the mode line, report how long it was.
+ * Output a string to the mode line, report how long it was,
+ * dealing with long lines and the display of unprintable
+ * things like control characters. Also expand tabs every 8
+ * columns. This code only puts printing characters into
+ * the virtual display image. Special care must be taken when
+ * expanding tabs. On a screen whose width is not a multiple
+ * of 8, it is possible for the virtual cursor to hit the
+ * right margin before the next tab stop is reached. This
+ * makes the tab code loop if you are not careful.
+ * Three guesses how we found this.
  */
 int
-vtputs(const char *s)
+vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 {
-	int n = 0;
+	const unsigned char *us = (const unsigned char *) s;
+	struct video *vp = vscreen[vtrow];
+	size_t bytes_handled = 0;
+	size_t last_full_byte_start = vtcol;
+	size_t space_printed = 0;
 
-	while (*s != '\0') {
-		vtputc(*s++);
-		++n;
+	if (!s) {
+		return (0);
 	}
-	return (n);
+
+	while (*us && (!max_bytes || bytes_handled < max_bytes)) {
+		if (space_printed + initial_col >= ncol) {
+			vp->v_text[last_full_byte_start] = '$';
+			while (++last_full_byte_start <= vtcol) {
+				vp->v_text[last_full_byte_start] = ' ';
+			}
+			bytes_handled++;
+			space_printed++;
+			us++;
+		} else if (*us == '\t'
+#ifdef	NOTAB
+		           && !(curbp->b_flag & BFNOTAB)
+#endif
+		           ) {
+			last_full_byte_start = vtcol;
+			do {
+				if (vtcol >= 0) {
+					vp->v_text[vtcol] = ' ';
+				}
+				vtcol++;
+				space_printed++;
+			} while (vtcol < ncol && (vtcol & 0x07) != 0);
+			us++;
+			bytes_handled++;
+		} else if (ISCTRL(*us)) {
+			last_full_byte_start = vtcol;
+			if (vtcol >= 0) {
+				vp->v_text[vtcol] = '^';
+			}
+			vtcol++;
+			if (vtcol >= 0) {
+				vp->v_text[vtcol] = CCHR(*us);
+			}
+			vtcol++;
+			bytes_handled++;
+			space_printed += 2;
+			us++;
+		} else if (isprint(*us)) {
+			last_full_byte_start = vtcol;
+			if (vtcol >= 0) {
+				vp->v_text[vtcol] = *us++;
+			}
+			vtcol++;
+			bytes_handled++;
+			space_printed++;
+		} else if (curbp->b_flag & BFSHOWWIDE) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumable = max_bytes ?
+			        (max_bytes - bytes_handled) : -1;
+			size_t consumed = mbrtowc(&wc, (const char *)us,
+			                          consumable, &mbs);
+			int width = -1;
+			last_full_byte_start = vtcol;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				bytes_handled += consumed;
+				space_printed += width;
+				do {
+					if (vtcol >= 0) {
+						vp->v_text[vtcol] = *us++;
+					}
+					vtcol++;
+				} while (--consumed);
+			} else {
+				char bf[5];
+				snprintf(bf, sizeof(bf), "\\%o", *us);
+				bytes_handled++;
+				space_printed += vtputs(bf, 0,
+				    space_printed + initial_col);
+				us++;
+			}
+		} else {
+			char bf[5];
+			last_full_byte_start = vtcol;
+			snprintf(bf, sizeof(bf), "\\%o", *us);
+			bytes_handled++;
+			space_printed += vtputs(bf, 0,
+			    space_printed + initial_col);
+			us++;
+		}
+	}
+
+	return (space_printed);
 }
 
 /*

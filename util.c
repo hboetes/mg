@@ -13,6 +13,8 @@
 #include <ctype.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <wchar.h>
 
 #include "def.h"
 
@@ -33,6 +35,9 @@ showcpos(int f, int n)
 	int	 nline, row;
 	int	 cline, cbyte;		/* Current line/char/byte */
 	int	 ratio;
+	char	 ismb = 0;
+	wchar_t	 wc = 0;
+	char	 mbc[MB_CUR_MAX + 1];
 
 	/* collect the data */
 	clp = bfirstlp(curbp);
@@ -69,8 +74,41 @@ showcpos(int f, int n)
 		clp = lforw(clp);
 	}
 	ratio = nchar ? (100L * cchar) / nchar : 100;
-	ewprintf("Char: %c (0%o)  point=%ld(%d%%)  line=%d  row=%d  col=%d",
-	    cbyte, cbyte, cchar, ratio, cline, row, getcolpos(curwp));
+
+	if (curbp->b_flag & BFSHOWWIDE) {
+		mbstate_t mbs = { 0 };
+		size_t consumed = 0;
+		size_t offset = 0;
+		while (cbyte != '\n' && offset <= curwp->w_doto) {
+			int c = lgetc(clp, curwp->w_doto - offset);
+			if (isprint(c) || (ISCTRL(c) != FALSE)) {
+				break;
+			}
+			consumed = mbrtowc(&wc,
+			                   &clp->l_text[curwp->w_doto - offset],
+			                   llength(clp) - curwp->w_doto + offset,
+			                   &mbs);
+			if (consumed < (size_t) -2) {
+				ismb = (offset < consumed);
+				snprintf(mbc, consumed + 1, "%s",
+				         &clp->l_text[curwp->w_doto - offset]);
+				mbc[consumed + 1] = '\0';
+				break;
+			}
+			offset++;
+		}
+	}
+
+	if (ismb) {
+		ewprintf("Char: %s (codepoint 0x%lx) Byte: %c (0%o)  "
+		         "point=%ld(%d%%)  line=%d  row=%d col=%d", mbc,
+		         (long) wc, cbyte, cbyte, cchar, ratio, cline, row,
+		         getcolpos(curwp));
+	} else {
+		ewprintf("Char: %c (0%o)  point=%ld(%d%%)  line=%d  row=%d"
+		         "col=%d", cbyte, cbyte, cchar, ratio, cline, row,
+		         getcolpos(curwp));
+	}
 	return (TRUE);
 }
 
@@ -96,6 +134,22 @@ getcolpos(struct mgwin *wp)
 			col += 2;
 		else if (isprint(c)) {
 			col++;
+		} else if (wp->w_bufp->b_flag & BFSHOWWIDE) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumed = mbrtowc(&wc, &wp->w_dotp->l_text[i],
+			                          llength(wp->w_dotp) - i,
+			                          &mbs);
+			int width = -1;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				col += width;
+				i += (consumed - 1);
+			} else {
+				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+			}
 		} else {
 			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
 		}

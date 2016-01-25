@@ -9,6 +9,8 @@
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <wchar.h>
 
 #include "def.h"
 #include "kbd.h"
@@ -403,6 +405,43 @@ quote(int f, int n)
 			ungetkey(c);
 	}
 	return (selfinsert(f, n));
+}
+
+/*
+ * Prompt for a codepoint in whatever the native system's encoding is,
+ * insert it into the file
+ */
+int
+insert_char(int f, int n)
+{
+	char *bufp;
+	char inpbuf[32];
+	wchar_t wc;
+	char mb[MB_CUR_MAX + 1];
+	mbstate_t mbs = { 0 };
+	size_t mbslen;
+	size_t i;
+
+	if ((bufp = eread("Insert character (hex): ", inpbuf, sizeof inpbuf,
+	     EFNEW)) == NULL) {
+		return (ABORT);
+	} else if (bufp[0] == '\0') {
+		return (FALSE);
+	}
+
+	wc = (wchar_t) strtoll(bufp, NULL, 16);
+	mbslen = wcrtomb(mb, wc, &mbs);
+	if (mbslen == (size_t) -1) {
+		return (FALSE);
+	}
+
+	for (i = 0; i < mbslen; ++i) {
+		if (linsert(1, mb[i]) == FALSE) {
+			return (FALSE);
+		}
+	}
+
+	return (TRUE);
 }
 
 /*

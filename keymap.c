@@ -120,6 +120,21 @@ static struct KEYMAPE (2) cX4map = {
 	}
 };
 
+static PF cX8J[] = {
+	insert_char		/* ^M */
+};
+
+static struct KEYMAPE (1) cX8map = {
+	1,
+	1,
+	rescan,
+	{
+		{
+			CCHR('M'), CCHR('M'), cX8J, NULL
+		}
+	}
+};
+
 static PF cXcB[] = {
 	listbuffers,		/* ^B */
 	quit,			/* ^C */
@@ -158,6 +173,10 @@ static PF cX0[] = {
 	NULL			/* 4 */
 };
 
+static PF cX8[] = {
+	NULL			/* 4 */
+};
+
 static PF cXeq[] = {
 	showcpos		/* = */
 };
@@ -189,9 +208,9 @@ static PF cXcar[] = {
 	undo			/* u */
 };
 
-struct KEYMAPE (6) cXmap = {
-	6,
-	6,
+struct KEYMAPE (7) cXmap = {
+	7,
+	7,
 	rescan,
 	{
 		{
@@ -205,6 +224,9 @@ struct KEYMAPE (6) cXmap = {
 		},
 		{
 			'0', '4', cX0, (KEYMAP *) & cX4map
+		},
+		{
+			'8', '8', cX8, (KEYMAP *) & cX8map
 		},
 		{
 			'=', '=', cXeq, NULL
@@ -491,6 +513,18 @@ static struct KEYMAPE (1) overwmap = {
 	}
 };
 
+static struct KEYMAPE (1) widemap = {
+	0,
+	1,		/* 1 to avoid 0 sized array */
+	rescan,
+	{
+		/* unused dummy entry for VMS C */
+		{
+			(KCHAR)0, (KCHAR)0, NULL, NULL
+		}
+	}
+};
+
 
 /*
  * The basic (root) keyboard map
@@ -513,6 +547,7 @@ static struct maps_s map_table[] = {
 	{(KEYMAP *) &notabmap, "notab",},
 #endif /* NOTAB */
 	{(KEYMAP *) &overwmap, "overwrite",},
+	{(KEYMAP *) &widemap, "wide",},
 	{(KEYMAP *) &metamap, "esc prefix",},
 	{(KEYMAP *) &cXmap, "c-x prefix",},
 	{(KEYMAP *) &cX4map, "c-x 4 prefix",},
