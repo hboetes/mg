@@ -4,7 +4,6 @@
 /pathnames.h/1.1/Mon Jun 18 07:14:55 2012//
 /cinfo.c/1.18/Mon Mar 23 11:03:05 2015//
 /dir.c/1.28/Mon Mar 23 11:03:05 2015//
-/fileio.c/1.99/Result of merge//
 /grep.c/1.44/Mon Mar 23 11:03:05 2015//
 /help.c/1.35/Mon Mar 23 11:03:05 2015//
 /kbd.h/1.19/Mon Mar 23 11:03:05 2015//
@@ -49,4 +48,5 @@
 /yank.c/1.14/Thu Jan  7 18:55:54 2016//
 /cscope.c/1.16/Wed Jan 20 19:34:39 2016//
 /tags.c/1.13/Result of merge//
+/fileio.c/1.100/Result of merge//
 D
