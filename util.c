@@ -75,7 +75,7 @@ showcpos(int f, int n)
 	}
 	ratio = nchar ? (100L * cchar) / nchar : 100;
 
-	if (curbp->b_flag & BFSHOWWIDE) {
+	if (!(curbp->b_flag & BFSHOWRAW)) {
 		mbstate_t mbs = { 0 };
 		size_t consumed = 0;
 		size_t offset = 0;
@@ -94,6 +94,8 @@ showcpos(int f, int n)
 				         &clp->l_text[curwp->w_doto - offset]);
 				mbc[consumed + 1] = '\0';
 				break;
+			} else {
+				memset(&mbs, 0, sizeof mbs);
 			}
 			offset++;
 		}
@@ -134,7 +136,7 @@ getcolpos(struct mgwin *wp)
 			col += 2;
 		else if (isprint(c)) {
 			col++;
-		} else if (wp->w_bufp->b_flag & BFSHOWWIDE) {
+		} else if (!(wp->w_bufp->b_flag & BFSHOWRAW)) {
 			mbstate_t mbs = { 0 };
 			wchar_t wc = 0;
 			size_t consumed = mbrtowc(&wc, &wp->w_dotp->l_text[i],

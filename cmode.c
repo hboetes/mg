@@ -424,7 +424,7 @@ findcolpos(const struct buffer *bp, const struct line *lp, int lo)
 			col += 2;
 		} else if (isprint(c)) {
 			col++;
-		} else if (bp->b_flag & BFSHOWWIDE) {
+		} else if (!(bp->b_flag & BFSHOWRAW)) {
 			mbstate_t mbs = { 0 };
 			wchar_t wc = 0;
 			size_t consumed = mbrtowc(&wc, &lp->l_text[i],

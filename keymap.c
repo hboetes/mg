@@ -513,7 +513,7 @@ static struct KEYMAPE (1) overwmap = {
 	}
 };
 
-static struct KEYMAPE (1) widemap = {
+static struct KEYMAPE (1) rawmap = {
 	0,
 	1,		/* 1 to avoid 0 sized array */
 	rescan,
@@ -547,7 +547,7 @@ static struct maps_s map_table[] = {
 	{(KEYMAP *) &notabmap, "notab",},
 #endif /* NOTAB */
 	{(KEYMAP *) &overwmap, "overwrite",},
-	{(KEYMAP *) &widemap, "wide",},
+	{(KEYMAP *) &rawmap, "raw",},
 	{(KEYMAP *) &metamap, "esc prefix",},
 	{(KEYMAP *) &cXmap, "c-x prefix",},
 	{(KEYMAP *) &cX4map, "c-x 4 prefix",},

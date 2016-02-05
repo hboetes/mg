@@ -56,7 +56,7 @@ void	vtmove(int, int);
 void	vtpute(int);
 int	vtputs(const char *, size_t, size_t);
 void	vteeol(void);
-void	updext(int, int);
+int	updext(int, int);
 void	modeline(struct mgwin *, int);
 void	setscores(int, int);
 void	traceback(int, int, int, int);
@@ -260,7 +260,7 @@ vtinit(void)
 	 */
 
 	blanks.v_color = CTEXT;
-	for (i = 0; i < ncol; ++i)
+	for (i = 0; i < ncol * MB_CUR_MAX; ++i)
 		blanks.v_text[i] = ' ';
 }
 
@@ -435,6 +435,7 @@ update(int modelinecolor)
 		++currow;
 		lp = lforw(lp);
 	}
+
 	curcol = 0;
 	i = 0;
 	while (i < curwp->w_doto) {
@@ -445,13 +446,15 @@ update(int modelinecolor)
 		    && !(curbp->b_flag & BFNOTAB)
 #endif
 			) {
-			curcol |= 0x07;
 			curcol++;
+			while ((curcol - lbound) & 0x07) {
+				curcol++;
+			}
 		} else if (ISCTRL(c) != FALSE)
 			curcol += 2;
 		else if (isprint(c)) {
 			curcol++;
-		} else if (curbp->b_flag & BFSHOWWIDE) {
+		} else if (!(curbp->b_flag & BFSHOWRAW)) {
 			mbstate_t mbs = { 0 };
 			wchar_t wc = 0;
 			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
@@ -459,6 +462,8 @@ update(int modelinecolor)
 			int width = -1;
 			if (consumed < (size_t) -2) {
 				width = wcwidth(wc);
+			} else {
+				memset(&mbs, 0, sizeof mbs);
 			}
 			if (width >= 0) {
 				curcol += width;
@@ -476,7 +481,7 @@ update(int modelinecolor)
 	if (curcol >= ncol - 1) {	/* extended line. */
 		/* flag we are extended and changed */
 		vscreen[currow]->v_flag |= VFEXT | VFCHG;
-		updext(currow, curcol);	/* and output extended line */
+		curcol = updext(currow, curcol);
 	} else
 		lbound = 0;	/* not extended line */
 
@@ -604,37 +609,40 @@ ucopy(struct video *vvp, struct video *pvp)
 }
 
 /*
- * updext: update the extended line which the cursor is currently on at a
- * column greater than the terminal width. The line will be scrolled right or
- * left to let the user see where the cursor is.
+ * updext: update the extended line which the cursor is currently on
+ * at a column greater than the terminal width. The line will be
+ * scrolled right or left to let the user see where the cursor
+ * is. curcol may need to be adjusted, depending on how wide
+ * characters and lbound interact, that adjusted position is returned.
  */
-void
+int
 updext(int currow, int curcol)
 {
-	struct line	*lp;			/* pointer to current line */
+	struct line *lp = curwp->w_dotp;	/* pointer to current line */
 	size_t startbyte;
-	size_t extent;
+	int bettercol = curcol;
+	size_t fullextent;
 
 	if (ncol < 2)
-		return;
+		return curcol;
 
 	/*
-	 * calculate what column the left bound should be
-	 * (force cursor into middle half of screen)
+	 * calculate what column the left bound should be (force
+	 * cursor into middle half of screen). Ensuring that it is at
+	 * a tabstop allows update() to calculate curcol without
+	 * wondering how tabstops are calculated before the first '$'.
 	 */
 	lbound = curcol - (curcol % (ncol >> 1)) - (ncol >> 2);
-	startbyte = getbyteofcol(curwp->w_dotp, 0, lbound + 1);
-	extent = getbyteofcol(curwp->w_dotp, startbyte, ncol) - startbyte;
+	lbound = (lbound | 0x07) + 1;
+	vscreen[currow]->v_text[0] = '$';
+	vtmove(currow, 1);
+	startbyte = getbyteofcol(lp, 0, lbound + 1);
+	fullextent = getbyteofcol(lp, startbyte, ncol + 1);
+	vtputs(lp->l_text + startbyte, fullextent - startbyte, 1);
+	vteeol();
 
-	/*
-	 * scan through the line outputing characters to the virtual screen
-	 * once we reach the left edge
-	 */
-	vtmove(currow, 1);		/* leave room for '$' */
-	lp = curwp->w_dotp;			/* line to output */
-	vtputs(lp->l_text + startbyte, extent, 1);
-	vteeol();				/* truncate the virtual line */
-	vscreen[currow]->v_text[0] = '$';	/* and put a '$' in column 1 */
+	bettercol = lbound + getcolofbyte(lp, startbyte, 1, curwp->w_doto);
+	return (bettercol);
 }
 
 /*
@@ -872,13 +880,7 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 
 	while (*us && (!max_bytes || bytes_handled < max_bytes)) {
 		if (space_printed + initial_col >= ncol) {
-			vp->v_text[last_full_byte_start] = '$';
-			while (++last_full_byte_start <= vtcol) {
-				vp->v_text[last_full_byte_start] = ' ';
-			}
-			bytes_handled++;
-			space_printed++;
-			us++;
+			break;
 		} else if (*us == '\t'
 #ifdef	NOTAB
 		           && !(curbp->b_flag & BFNOTAB)
@@ -887,11 +889,13 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 			last_full_byte_start = vtcol;
 			do {
 				if (vtcol >= 0) {
+					last_full_byte_start = vtcol;
 					vp->v_text[vtcol] = ' ';
 				}
 				vtcol++;
 				space_printed++;
-			} while (vtcol < ncol && (vtcol & 0x07) != 0);
+			} while (space_printed + initial_col < ncol &&
+			         ((space_printed + initial_col) & 0x07));
 			us++;
 			bytes_handled++;
 		} else if (ISCTRL(*us)) {
@@ -915,7 +919,7 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 			vtcol++;
 			bytes_handled++;
 			space_printed++;
-		} else if (curbp->b_flag & BFSHOWWIDE) {
+		} else if (!(curbp->b_flag & BFSHOWRAW)) {
 			mbstate_t mbs = { 0 };
 			wchar_t wc = 0;
 			size_t consumable = max_bytes ?
@@ -955,6 +959,18 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 		}
 	}
 
+	if ((space_printed + initial_col > ncol) ||
+	    (space_printed + initial_col == ncol &&
+	    (*us && (!max_bytes || bytes_handled < max_bytes)))) {
+		vp->v_text[last_full_byte_start] = '$';
+		while (++last_full_byte_start <= vtcol) {
+			vp->v_text[last_full_byte_start] = ' ';
+		}
+		bytes_handled++;
+		space_printed++;
+		us++;
+	}
+
 	return (space_printed);
 }
 
@@ -973,11 +989,11 @@ hash(struct video *vp)
 	char   *s;
 
 	if ((vp->v_flag & VFHBAD) != 0) {	/* Hash bad.		 */
-		s = &vp->v_text[ncol - 1];
-		for (i = ncol; i != 0; --i, --s)
+		s = &vp->v_text[ncol * MB_CUR_MAX - 1];
+		for (i = ncol * MB_CUR_MAX; i != 0; --i, --s)
 			if (*s != ' ')
 				break;
-		n = ncol - i;			/* Erase cheaper?	 */
+		n = ncol * MB_CUR_MAX - i;			/* Erase cheaper?	 */
 		if (n > tceeol)
 			n = tceeol;
 		vp->v_cost = i + n;		/* Bytes + blanks.	 */

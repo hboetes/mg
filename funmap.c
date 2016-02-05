@@ -191,6 +191,7 @@ static struct funmap functnames[] = {
 	{shellcommand, "shell-command",},
 	{piperegion, "shell-command-on-region",},
 	{shrinkwind, "shrink-window",},
+	{show_raw_mode, "show-raw-mode",},
 #ifdef NOTAB
 	{space_to_tabstop, "space-to-tabstop",},
 #endif /* NOTAB */
@@ -214,7 +215,6 @@ static struct funmap functnames[] = {
 	{togglevisiblebell, "visible-bell",},
 	{tagsvisit, "visit-tags-table",},
 	{showcpos, "what-cursor-position",},
-	{show_wide_mode, "show-wide-mode",},
 	{filewrite, "write-file",},
 	{yank, "yank",},
 	{NULL, NULL,}

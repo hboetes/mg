@@ -297,7 +297,7 @@ struct buffer {
 #define BFDIRTY     0x20		/* Buffer was modified elsewhere */
 #define BFIGNDIRTY  0x40		/* Ignore modifications 	 */
 #define BFDIREDDEL  0x80		/* Dired has a deleted 'D' file	 */
-#define BFSHOWWIDE  0x100		/* Show wide characters		 */
+#define BFSHOWRAW   0x100		/* Show unprintable as octal	 */
 /*
  * This structure holds information about recent actions for the Undo command.
  */
@@ -521,7 +521,8 @@ int		 forwline(int, int);
 int		 backline(int, int);
 void		 setgoal(void);
 int		 getgoal(struct line *);
-int		 getbyteofcol(const struct line *, size_t, size_t);
+size_t		 getbyteofcol(const struct line *, size_t, size_t);
+size_t		 getcolofbyte(const struct line *, size_t, size_t, size_t);
 int		 forwpage(int, int);
 int		 backpage(int, int);
 int		 forw1page(int, int);
@@ -667,7 +668,7 @@ int		 notabmode(int, int);
 #endif	/* NOTAB */
 int		 overwrite_mode(int, int);
 int		 set_default_mode(int,int);
-int		 show_wide_mode(int, int);
+int		 show_raw_mode(int, int);
 
 #ifdef REGEX
 /* re_search.c X */

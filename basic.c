@@ -277,7 +277,7 @@ getgoal(struct line *dlp)
  * Return the byte offset within lp that is targetcol columns beyond
  * startbyte
  */
-int
+size_t
 getbyteofcol(const struct line *lp, const size_t startbyte,
              const size_t targetcol)
 {
@@ -300,7 +300,7 @@ getbyteofcol(const struct line *lp, const size_t startbyte,
 			col += 2;
 		} else if (isprint(c)) {
 			col++;
-		} else if (curbp->b_flag & BFSHOWWIDE) {
+		} else if (!(curbp->b_flag & BFSHOWRAW)) {
 			mbstate_t mbs = { 0 };
 			wchar_t wc = 0;
 			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
@@ -323,6 +323,59 @@ getbyteofcol(const struct line *lp, const size_t startbyte,
 	}
 	return (i);
 }
+
+/*
+ * Return the column at which specified offset byte would appear, if
+ * this were part of a longer string printed by vtputs, starting at
+ * intial_col
+ */
+size_t
+getcolofbyte(const struct line *lp, const size_t startbyte,
+             const size_t initial_col, const size_t targetoffset)
+{
+	int c;
+	size_t i, col = initial_col;
+	char tmp[5];
+	size_t advance_by = 1;
+
+	for (i = startbyte; i < llength(lp); i += advance_by) {
+		if (i >= targetoffset)
+			break;
+		advance_by = 1;
+		c = lgetc(lp, i);
+		if (c == '\t'
+#ifdef	NOTAB
+		    && !(curbp->b_flag & BFNOTAB)
+#endif
+			) {
+			col |= 0x07;
+			col++;
+		} else if (ISCTRL(c) != FALSE) {
+			col += 2;
+		} else if (isprint(c)) {
+			col++;
+		} else if (!(curbp->b_flag & BFSHOWRAW)) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
+			                          llength(lp) - i, &mbs);
+			int width = -1;
+			if (consumed < (size_t) -2) {
+				width = wcwidth(wc);
+			}
+			if (width >= 0) {
+				col += width;
+				advance_by = consumed;
+			} else {
+				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+			}
+		} else {
+			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+		}
+	}
+	return (col);
+}
+
 
 /*
  * Scroll forward by a specified number

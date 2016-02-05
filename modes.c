@@ -111,17 +111,17 @@ overwrite_mode(int f, int n)
 }
 
 int
-show_wide_mode(int f, int n)
+show_raw_mode(int f, int n)
 {
-	if (changemode(f, n, "wide") == FALSE)
+	if (changemode(f, n, "raw") == FALSE)
 		return (FALSE);
 	if (f & FFARG) {
 		if (n <= 0)
-			curbp->b_flag &= ~BFSHOWWIDE;
+			curbp->b_flag &= ~BFSHOWRAW;
 		else
-			curbp->b_flag |= BFSHOWWIDE;
+			curbp->b_flag |= BFSHOWRAW;
 	} else
-		curbp->b_flag ^= BFSHOWWIDE;
+		curbp->b_flag ^= BFSHOWRAW;
 
 	sgarbf = TRUE;
 	return (TRUE);
@@ -187,11 +187,11 @@ set_default_mode(int f, int n)
 			defb_flag |= BFNOTAB;
 	}
 #endif	/* NOTAB */
-	if (strcmp(modebuf, "wide") == 0) {
+	if (strcmp(modebuf, "raw") == 0) {
 		if (n <= 0)
-			defb_flag &= ~BFSHOWWIDE;
+			defb_flag &= ~BFSHOWRAW;
 		else
-			defb_flag |= BFSHOWWIDE;
+			defb_flag |= BFSHOWRAW;
 	}
 	return (TRUE);
 }
