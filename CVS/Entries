@@ -1,7 +1,5 @@
 /region.c/1.35/Result of merge//
 /ttyio.c/1.37/Wed Mar 25 18:47:22 2015//
-/def.h/1.154/Result of merge//
-/main.c/1.81/Thu Jan  7 18:55:54 2016//
 /tags.c/1.13/Result of merge//
 /fileio.c/1.100/Result of merge//
 /Makefile/1.31/Thu Mar 31 13:25:29 2016//
@@ -20,7 +18,6 @@
 /echo.c/1.65/Thu Mar 31 13:25:29 2016//
 /extend.c/1.63/Thu Mar 31 13:25:29 2016//
 /file.c/1.100/Thu Mar 31 13:25:29 2016//
-/funmap.c/1.52/Thu Mar 31 13:25:29 2016//
 /funmap.h/1.7/Thu Mar 31 13:25:29 2016//
 /grep.c/1.44/Thu Mar 31 13:25:29 2016//
 /help.c/1.35/Thu Mar 31 13:25:29 2016//
@@ -32,9 +29,7 @@
 /macro.c/1.16/Thu Mar 31 13:25:29 2016//
 /macro.h/1.7/Thu Mar 31 13:25:29 2016//
 /match.c/1.19/Thu Mar 31 13:25:29 2016//
-/mg.1/1.103/Thu Mar 31 13:25:45 2016//
 /modes.c/1.20/Thu Mar 31 13:25:29 2016//
-/paragraph.c/1.42/Thu Mar 31 13:25:29 2016//
 /pathnames.h/1.1/Thu Mar 31 13:25:29 2016//
 /re_search.c/1.31/Thu Mar 31 13:25:29 2016//
 /search.c/1.44/Thu Mar 31 13:25:29 2016//
@@ -49,4 +44,9 @@
 /window.c/1.36/Thu Mar 31 13:25:29 2016//
 /word.c/1.19/Thu Mar 31 13:25:29 2016//
 /yank.c/1.14/Thu Mar 31 13:25:29 2016//
+/def.h/1.155/Result of merge//
+/funmap.c/1.53/Thu Apr 21 20:37:36 2016//
+/main.c/1.82/Result of merge//
+/mg.1/1.104/Thu Apr 21 20:37:36 2016//
+/paragraph.c/1.44/Thu Apr 21 20:37:36 2016//
 D
