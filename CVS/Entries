@@ -1,52 +1,52 @@
 /region.c/1.35/Result of merge//
 /ttyio.c/1.37/Wed Mar 25 18:47:22 2015//
-/tags.c/1.13/Result of merge//
-/fileio.c/1.100/Result of merge//
 /Makefile/1.31/Thu Mar 31 13:25:29 2016//
 /README/1.14/Thu Mar 31 13:25:29 2016//
 /autoexec.c/1.17/Thu Mar 31 13:25:29 2016//
-/basic.c/1.47/Thu Mar 31 13:25:29 2016//
 /bell.c/1.4/Thu Mar 31 13:25:29 2016//
-/buffer.c/1.100/Thu Mar 31 13:25:29 2016//
 /chrdef.h/1.10/Thu Mar 31 13:25:29 2016//
 /cinfo.c/1.18/Thu Mar 31 13:25:29 2016//
-/cmode.c/1.16/Thu Mar 31 13:25:29 2016//
 /cscope.c/1.16/Thu Mar 31 13:25:29 2016//
 /dir.c/1.28/Thu Mar 31 13:25:29 2016//
 /dired.c/1.82/Thu Mar 31 13:25:29 2016//
-/display.c/1.47/Thu Mar 31 13:25:29 2016//
-/echo.c/1.65/Thu Mar 31 13:25:29 2016//
 /extend.c/1.63/Thu Mar 31 13:25:29 2016//
 /file.c/1.100/Thu Mar 31 13:25:29 2016//
 /funmap.h/1.7/Thu Mar 31 13:25:29 2016//
 /grep.c/1.44/Thu Mar 31 13:25:29 2016//
 /help.c/1.35/Thu Mar 31 13:25:29 2016//
-/kbd.c/1.30/Thu Mar 31 13:25:29 2016//
 /kbd.h/1.19/Thu Mar 31 13:25:29 2016//
 /key.h/1.5/Thu Mar 31 13:25:29 2016//
-/keymap.c/1.58/Thu Mar 31 13:25:29 2016//
 /line.c/1.58/Thu Mar 31 13:25:29 2016//
 /macro.c/1.16/Thu Mar 31 13:25:29 2016//
 /macro.h/1.7/Thu Mar 31 13:25:29 2016//
 /match.c/1.19/Thu Mar 31 13:25:29 2016//
-/modes.c/1.20/Thu Mar 31 13:25:29 2016//
 /pathnames.h/1.1/Thu Mar 31 13:25:29 2016//
 /re_search.c/1.31/Thu Mar 31 13:25:29 2016//
 /search.c/1.44/Thu Mar 31 13:25:29 2016//
 /spawn.c/1.12/Thu Mar 31 13:25:29 2016//
-/theo.c/1.150/Thu Mar 31 13:25:29 2016//
 /tty.c/1.36/Thu Mar 31 13:25:29 2016//
 /ttykbd.c/1.18/Thu Mar 31 13:25:29 2016//
 /tutorial/1.16/Thu Mar 31 13:25:29 2016//
 /undo.c/1.57/Thu Mar 31 13:25:29 2016//
-/util.c/1.38/Thu Mar 31 13:25:29 2016//
 /version.c/1.10/Thu Mar 31 13:25:29 2016//
 /window.c/1.36/Thu Mar 31 13:25:29 2016//
 /word.c/1.19/Thu Mar 31 13:25:29 2016//
 /yank.c/1.14/Thu Mar 31 13:25:29 2016//
 /def.h/1.155/Result of merge//
-/funmap.c/1.53/Thu Apr 21 20:37:36 2016//
-/main.c/1.82/Result of merge//
-/mg.1/1.104/Thu Apr 21 20:37:36 2016//
-/paragraph.c/1.44/Thu Apr 21 20:37:36 2016//
+/basic.c/1.47/Thu Apr 21 21:40:09 2016//
+/buffer.c/1.101/Thu Sep  1 15:14:36 2016//
+/cmode.c/1.16/Thu Apr 21 21:40:09 2016//
+/display.c/1.47/Thu Apr 21 21:40:09 2016//
+/echo.c/1.65/Thu Apr 21 21:40:09 2016//
+/fileio.c/1.103/Result of merge//
+/funmap.c/1.53/Thu Apr 21 21:40:09 2016//
+/kbd.c/1.30/Thu Apr 21 21:40:09 2016//
+/keymap.c/1.58/Thu Apr 21 21:40:09 2016//
+/main.c/1.83/Result of merge+Thu Sep  1 15:14:36 2016//
+/mg.1/1.105/Thu Sep  1 15:14:36 2016//
+/modes.c/1.20/Thu Apr 21 21:40:09 2016//
+/paragraph.c/1.44/Thu Apr 21 21:40:09 2016//
+/tags.c/1.14/Result of merge//
+/theo.c/1.152/Thu Sep  1 15:14:36 2016//
+/util.c/1.38/Thu Apr 21 21:40:09 2016//
 D

@@ -1,4 +1,4 @@
-/*	$OpenBSD: fileio.c,v 1.100 2016/01/26 18:02:51 jasper Exp $	*/
+/*	$OpenBSD: fileio.c,v 1.103 2016/07/28 21:40:25 tedu Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -528,14 +528,8 @@ make_file_list(char *buf)
 		} else if (dent->d_type == DT_LNK ||
 			    dent->d_type == DT_UNKNOWN) {
 			struct stat	statbuf;
-			char		statname[NFILEN + 2];
 
-			statbuf.st_mode = 0;
-			ret = snprintf(statname, sizeof(statname), "%s/%s",
-			    dir, dent->d_name);
-			if (ret < 0 || ret > sizeof(statname) - 1)
-				continue;
-			if (stat(statname, &statbuf) < 0)
+			if (fstatat(dirfd(dirp), dent->d_name, &statbuf, 0) < 0)
 				continue;
 			if (S_ISDIR(statbuf.st_mode))
 				isdir = 1;
@@ -673,7 +667,7 @@ backuptohomedir(int f, int n)
 
 /*
  * For applications that use mg as the editor and have a desire to keep
- * '~' files in the TMPDIR, toggle the location: /tmp | ~/.mg.d
+ * '~' files in /tmp, toggle the location: /tmp | ~/.mg.d
  */
 int
 toggleleavetmp(int f, int n)
@@ -690,21 +684,10 @@ toggleleavetmp(int f, int n)
 int
 bkupleavetmp(const char *fn)
 {
-	char	*tmpdir, *tmp = NULL;
-
 	if (!leavetmp)
 		return(FALSE);
 
-	if((tmpdir = getenv("TMPDIR")) != NULL && *tmpdir != '\0') {
-		tmp = strstr(fn, tmpdir);
-		if (tmp == fn)
-			return (TRUE);
-
-		return (FALSE);
-	}
-
-	tmp = strstr(fn, "/tmp");
-	if (tmp == fn)
+	if (strncmp(fn, "/tmp", 4) == 0)
 		return (TRUE);
 
 	return (FALSE);
