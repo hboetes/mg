@@ -1,4 +1,4 @@
-/*	$OpenBSD: buffer.c,v 1.100 2015/10/10 08:35:26 lum Exp $	*/
+/*	$OpenBSD: buffer.c,v 1.102 2016/09/07 11:42:01 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -55,12 +55,13 @@ togglereadonly(int f, int n)
 int
 usebufname(const char *bufp)
 {
-	struct buffer *bp;
+	struct buffer *bp = NULL;
 
-	if (bufp == NULL)
-		return (ABORT);
-	if (bufp[0] == '\0' && curbp->b_altb != NULL)
-		bp = curbp->b_altb;
+	if (bufp == NULL) {
+		if ((bp = bfind("*scratch*", TRUE)) == NULL)
+			return(FALSE);
+	} else if (bufp[0] == '\0' && curbp->b_altb != NULL)
+			bp = curbp->b_altb;
 	else if ((bp = bfind(bufp, TRUE)) == NULL)
 		return (FALSE);
 
@@ -82,8 +83,7 @@ usebuffer(int f, int n)
 	char    bufn[NBUFN], *bufp;
 
 	/* Get buffer to use from user */
-	if ((curbp->b_altb == NULL) &&
-	    ((curbp->b_altb = bfind("*scratch*", TRUE)) == NULL))
+	if (curbp->b_altb == NULL)
 		bufp = eread("Switch to buffer: ", bufn, NBUFN, EFNEW | EFBUF);
 	else
 		bufp = eread("Switch to buffer: (default %s) ", bufn, NBUFN,
@@ -169,15 +169,12 @@ killbuffer(struct buffer *bp)
 	 * buffer.  Return if *scratch* is only buffer...
 	 */
 	if ((bp1 = bp->b_altb) == NULL) {
-		bp1 = (bp == bheadp) ? bp->b_bufp : bheadp;
-		if (bp1 == NULL) {
-			/* only one buffer. see if it's *scratch* */
-			if (bp == bfind("*scratch*", FALSE))
-				return (TRUE);
-			/* create *scratch* for alternate buffer */
-			if ((bp1 = bfind("*scratch*", TRUE)) == NULL)
-				return (FALSE);
-		}
+		/* only one buffer. see if it's *scratch* */
+		if (bp == bfind("*scratch*", FALSE))
+			return (TRUE);
+		/* create *scratch* for alternate buffer */
+		if ((bp1 = bfind("*scratch*", TRUE)) == NULL)
+			return (FALSE);
 	}
 	if ((s = bclear(bp)) != TRUE)
 		return (s);
@@ -716,12 +713,17 @@ popbuf(struct buffer *bp, int flags)
 
 		while (wp != NULL && wp == curwp)
 			wp = wp->w_wndp;
-	} else
-		for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+	} else {
+		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
 			if (wp->w_bufp == bp) {
 				wp->w_rflag |= WFFULL | WFFRAME;
 				return (wp);
 			}
+		}
+	}
+	if (!wp)
+		return (NULL);
+
 	if (showbuffer(bp, wp, WFFULL) != TRUE)
 		return (NULL);
 	return (wp);
