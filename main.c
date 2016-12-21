@@ -57,10 +57,9 @@ main(int argc, char **argv)
 	int	  	 nobackups = 0, bro = 0;
 	struct buffer	*bp = NULL;
 
-#if 0   /* Let's make this code ifdef'ed for now. I bet it will take a while
-         * until pledge() comes to other systems. */
+#if defined(__OpenBSD__)
 	if (pledge("stdio rpath wpath cpath fattr chown getpw tty proc exec",
-	    NULL) == -1)
+                NULL) == -1)
 		err(1, "pledge");
 #endif
 
