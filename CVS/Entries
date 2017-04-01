@@ -9,7 +9,6 @@
 /autoexec.c/1.17/Thu Sep  1 15:28:17 2016//
 /basic.c/1.47/Thu Sep  1 15:28:17 2016//
 /bell.c/1.4/Thu Sep  1 15:28:17 2016//
-/buffer.c/1.102/Mon Sep 12 16:36:25 2016//
 /chrdef.h/1.10/Thu Sep  1 15:28:17 2016//
 /cinfo.c/1.18/Thu Sep  1 15:28:17 2016//
 /cmode.c/1.16/Thu Sep  1 15:28:17 2016//
@@ -48,4 +47,5 @@
 /window.c/1.36/Thu Sep  1 15:28:17 2016//
 /word.c/1.19/Thu Sep  1 15:28:17 2016//
 /yank.c/1.14/Thu Sep  1 15:28:17 2016//
+/buffer.c/1.103/Sat Apr  1 06:51:57 2017//
 D
