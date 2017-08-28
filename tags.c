@@ -1,4 +1,4 @@
-/*	$OpenBSD: tags.c,v 1.14 2016/09/01 10:01:53 sunil Exp $	*/
+/*	$OpenBSD: tags.c,v 1.16 2017/08/06 04:39:45 bcallah Exp $	*/
 
 /*
  * This file is in the public domain.
@@ -90,7 +90,7 @@ tagsvisit(int f, int n)
 		return (FALSE);
 	}
 	
-	bufp = eread("visit tags table (default %s): ", fname,
+	bufp = eread("Visit tags table (default %s): ", fname,
 	    NFILEN, EFFILE | EFCR | EFNEW | EFDEF, DEFAULTFN);
 	if (bufp == NULL)
 		return (ABORT);
@@ -154,9 +154,9 @@ findtag(int f, int n)
 
 	if (curtoken(f, n, dtok) == FALSE) {
 		dtok[0] = '\0';
-		bufp = eread("Find tag:", utok, MAX_TOKEN, EFNUL | EFNEW);
+		bufp = eread("Find tag: ", utok, MAX_TOKEN, EFNUL | EFNEW);
 	} else
-		bufp = eread("Find tag (default %s):", utok, MAX_TOKEN,
+		bufp = eread("Find tag (default %s): ", utok, MAX_TOKEN,
 		    EFNUL | EFNEW, dtok);
 
 	if (bufp == NULL)
@@ -406,18 +406,18 @@ cleanup:
  * Search through each line of buffer for pattern.
  */
 int
-searchpat(char *pat)
+searchpat(char *s_pat)
 {
 	struct line *lp;
 	int dotline;
 	size_t plen;
 
-	plen = strlen(pat);
+	plen = strlen(s_pat);
 	dotline = 1;
 	lp = lforw(curbp->b_headp);
 	while (lp != curbp->b_headp) {
 		if (ltext(lp) != NULL && plen <= llength(lp) &&
-		    (strncmp(pat, ltext(lp), plen) == 0)) {
+		    (strncmp(s_pat, ltext(lp), plen) == 0)) {
 			curwp->w_doto = 0;
 			curwp->w_dotp = lp;
 			curwp->w_dotline = dotline;
