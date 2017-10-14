@@ -41,9 +41,3 @@ cvs you can see what I changed to port mg. Like this:
 ```
 cvs diff -uw
 ```
-
-## ABOUT fgetln()
-
-Incase you are wondering about that deprecation warning, here is a nice explanation about why it is hard to fix:
-
-  http://niallohiggins.com/2009/10/03/read-a-file-line-by-line-in-c-secure-fgets-idiom/
