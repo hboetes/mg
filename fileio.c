@@ -726,7 +726,7 @@ expandtilde(const char *fn)
 		return(ret);
 	}
 	if (ulen == 0) { /* ~/ or ~ */
-		if ((un = getlogin()) != NULL)
+		if ((un = getlogin()) != NULL || (un = getenv("LOGNAME")) != NULL)
 			(void)strlcpy(user, un, sizeof(user));
 		else
 			user[0] = '\0';
