@@ -25,13 +25,24 @@ Please provide patches that do not break stuff for other platforms.
 
 So, basic instructions for building mg:
 
- - Get libbsd installed.
+ - Get the libbsd and libncurses dev packages installed.
  - Run the following commands:
 
 ```
 make
 sudo make install
 ```
+
+## STATIC BUILDS
+
+I recently figured out how to make really portable static builds: On an
+alpine linux system, build with the command:
+```
+make STATIC=yesplease
+```
+glibc does not really support static binaries. https://www.musl-libc.org/
+does not have this problem.
+
 
 ## USING CVS
 
