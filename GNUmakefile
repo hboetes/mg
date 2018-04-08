@@ -38,6 +38,10 @@ ifeq ($(CURSES_LIBS),)
   $(error You probably need to install "libncurses5-dev" or "libncurses6-devel" or something like that.)
 endif
 
+ifdef STATIC
+  LDFLAGS=-static -static-libgcc
+endif
+
 CC?=		gcc
 CFLAGS?=	-O2 -pipe
 CFLAGS+=	-g -Wall
@@ -63,7 +67,6 @@ EXE_EXT=
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
 
 all: $(name)
-
 
 $(name): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $(name) $(LIBS)
