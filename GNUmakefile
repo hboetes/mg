@@ -35,7 +35,11 @@ endif
 
 CURSES_LIBS:= $(shell $(PKG_CONFIG) --libs ncurses)
 ifeq ($(CURSES_LIBS),)
-  $(error You probably need to install "libncurses5-dev" or "libnnurses6-devel" or something like that.)
+  $(error You probably need to install "libncurses5-dev" or "libncurses6-devel" or something like that.)
+endif
+
+ifdef STATIC
+  LDFLAGS=-static -static-libgcc
 endif
 
 CC?=		gcc
@@ -63,7 +67,6 @@ EXE_EXT=
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
 
 all: $(name)
-
 
 $(name): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $(name) $(LIBS)

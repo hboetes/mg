@@ -27,6 +27,14 @@
 #include "kbd.h"
 #include "pathnames.h"
 
+#ifndef MAXNAMLEN
+#define MAXNAMLEN 255
+#endif
+
+#ifndef DEFFILEMODE
+#define DEFFILEMODE 0666
+#endif
+
 static char *bkuplocation(const char *);
 static int   bkupleavetmp(const char *);
 
@@ -706,7 +714,7 @@ expandtilde(const char *fn)
 	struct stat	 statbuf;
 	const char	*cp;
 	char		 user[LOGIN_NAME_MAX], path[NFILEN];
-	char		*un, *ret;
+	char		*ret;
 	size_t		 ulen, plen;
 
 	path[0] = '\0';
@@ -725,21 +733,21 @@ expandtilde(const char *fn)
 			return (NULL);
 		return(ret);
 	}
+	pw = getpwuid(geteuid());
 	if (ulen == 0) { /* ~/ or ~ */
-		if ((un = getlogin()) != NULL)
-			(void)strlcpy(user, un, sizeof(user));
+		if (pw != NULL)
+			(void)strlcpy(user, pw->pw_name, sizeof(user));
 		else
 			user[0] = '\0';
 	} else { /* ~user/ or ~user */
 		memcpy(user, &fn[1], ulen);
 		user[ulen] = '\0';
 	}
-	pw = getpwnam(user);
 	if (pw != NULL) {
 		plen = strlcpy(path, pw->pw_dir, sizeof(path));
 		if (plen == 0 || path[plen - 1] != '/') {
 			if (strlcat(path, "/", sizeof(path)) >= sizeof(path)) {
-				dobeep();				
+				dobeep();
 				ewprintf("Path too long");
 				return (NULL);
 			}
