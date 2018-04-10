@@ -1,9 +1,9 @@
 # mg with wide display support.
 
-Add the following line to your `.mg`
+To disable, add the following line to your `.mg`
 
 ```
-set-default-mode "wide"
+set-default-mode "raw"
 ```
 
 # PORTING MG AND USING LIBBSD
