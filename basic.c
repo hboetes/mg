@@ -65,6 +65,33 @@ backchar(int f, int n)
 			curwp->w_dotline--;
 		} else
 			curwp->w_doto--;
+
+		/*
+		 * If we're on a multibyte character, and not in
+		 * raw mode, we should move all the way through it.
+		 */
+		if (!(curbp->b_flag & BFSHOWRAW)) {
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t offset = 0;
+			size_t consumed = 0;
+			struct line *clp = curwp->w_dotp;
+			while (offset <= curwp->w_doto) {
+				size_t s = curwp->w_doto - offset;
+				size_t len = llength(clp) - s;
+				consumed = mbrtowc(&wc, &clp->l_text[s],
+				                   len, &mbs);
+				if (consumed < (size_t) -2) {
+					curwp->w_doto -= offset;
+					break;
+				}
+				mbs = (mbstate_t) { 0 };
+				offset++;
+				if (offset > MB_CUR_MAX) {
+					break;
+				}
+			}
+		}
 	}
 	return (TRUE);
 }
@@ -109,8 +136,27 @@ forwchar(int f, int n)
 			curwp->w_doto = 0;
 			curwp->w_dotline++;
 			curwp->w_rflag |= WFMOVE;
-		} else
+		} else if (!(curbp->b_flag & BFSHOWRAW)) {
+			/*
+			 * If we're on a multibyte character, and
+			 * not in raw mode, we should move all the
+			 * way through it.
+			 */
+			mbstate_t mbs = { 0 };
+			wchar_t wc = 0;
+			size_t s = curwp->w_doto;
+			struct line *clp = curwp->w_dotp;
+			size_t len = llength(clp) - s;
+			size_t consumed = mbrtowc(&wc, &clp->l_text[s],
+				                  len, &mbs);
+			if (consumed && consumed < (size_t) -2) {
+				curwp->w_doto += consumed;
+			} else {
+				curwp->w_doto++;
+			}
+		} else {
 			curwp->w_doto++;
+		}
 	}
 	return (TRUE);
 }
