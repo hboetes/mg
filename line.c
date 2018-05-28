@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "def.h"
 
@@ -327,15 +328,15 @@ lnewline(void)
 }
 
 /*
- * This function deletes "n" bytes, starting at dot. (actually, n+1, as the
- * newline is included) It understands how to deal with end of lines, etc.
- * It returns TRUE if all of the characters were deleted, and FALSE if
- * they were not (because dot ran into the end of the buffer).
- * The "kflag" indicates either no insertion, or direction  of insertion
- * into the kill buffer.
+ * This function deletes "n" bytes, starting at dot. (actually,
+ * n+1, as the newline is included) It understands how to deal with
+ * end of lines, etc.  It returns TRUE if all of the characters
+ * were deleted, and FALSE if they were not (because dot ran into
+ * the end of the buffer).  The "kflag" indicates either no insertion,
+ * or direction  of insertion into the kill buffer.
  */
 int
-ldelete(RSIZE n, int kflag)
+ldeletebyte(RSIZE n, int kflag)
 {
 	struct line	*dotp;
 	RSIZE		 chunk;
@@ -355,6 +356,7 @@ ldelete(RSIZE n, int kflag)
 		ewprintf("Buffer is read only");
 		goto out;
 	}
+
 	len = n;
 	if ((sv = calloc(1, len + 1)) == NULL)
 		goto out;
@@ -414,6 +416,50 @@ ldelete(RSIZE n, int kflag)
 out:
 	free(sv);
 	return (rval);
+}
+
+/*
+ * This function is like ldeletebyte, but it deletes "n" characters.
+ */
+int
+ldeletechar(RSIZE n, int kflag)
+{
+	struct line	*dotp;
+	int		 doto;
+
+	/*
+	 * If we're in a wide context, the caller meant n *characters*,
+	 * but we prefer to work in bytes, so let's expand out n.
+	 */
+	if (!(curbp->b_flag & BFSHOWRAW)) {
+		size_t new_n = 0;
+		mbstate_t mbs = { 0 };
+		wchar_t wc = 0;
+		size_t consumed = 0;
+		dotp = curwp->w_dotp;
+		doto = curwp->w_doto;
+		for (size_t j = 0; j < n; ++j) {
+			if (doto == llength(dotp)) {
+				doto = 0;
+				dotp = lforw(dotp);
+				new_n++;
+			} else {
+				size_t len = llength(dotp) - doto;
+				consumed = mbrtowc(&wc,
+				                   &dotp->l_text[doto],
+				                   len, &mbs);
+				if (consumed < (size_t) -2) {
+					new_n += consumed;
+					doto += consumed;
+				} else {
+					new_n++;
+					doto++;
+				}
+			}
+		}
+		return ldeletebyte(new_n, kflag);
+	}
+	return ldeletebyte(n, kflag);
 }
 
 /*
@@ -523,7 +569,7 @@ lreplace(RSIZE plen, char *st)
 	undo_boundary_enable(FFRAND, 0);
 
 	(void)backchar(FFARG | FFRAND, (int)plen);
-	(void)ldelete(plen, KNONE);
+	(void)ldeletechar(plen, KNONE);
 
 	rlen = strlen(st);
 	region_put_data(st, rlen);

@@ -562,7 +562,7 @@ undo(int f, int n)
 			 */
 			switch (ptr->type) {
 			case INSERT:
-				ldelete(ptr->region.r_size, KNONE);
+				ldeletebyte(ptr->region.r_size, KNONE);
 				break;
 			case DELETE:
 				lp = curwp->w_dotp;

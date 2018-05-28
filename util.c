@@ -291,7 +291,7 @@ deblank(int f, int n)
 		return (TRUE);
 	curwp->w_dotp = lforw(lp1);
 	curwp->w_doto = 0;
-	return (ldelete((RSIZE)nld, KNONE));
+	return (ldeletechar((RSIZE)nld, KNONE));
 }
 
 /*
@@ -332,7 +332,7 @@ delwhite(int f, int n)
 
 	if (s == TRUE)
 		(void)forwchar(FFRAND, 1);
-	(void)ldelete((RSIZE)(col - curwp->w_doto), KNONE);
+	(void)ldeletebyte((RSIZE)(col - curwp->w_doto), KNONE);
 	return (TRUE);
 }
 
@@ -484,7 +484,7 @@ forwdel(int f, int n)
 		thisflag |= CFKILL;
 	}
 
-	return (ldelete((RSIZE) n, (f & FFARG) ? KFORW : KNONE));
+	return (ldeletechar((RSIZE) n, (f & FFARG) ? KFORW : KNONE));
 }
 
 /*
@@ -508,7 +508,7 @@ backdel(int f, int n)
 		thisflag |= CFKILL;
 	}
 	if ((s = backchar(f | FFRAND, n)) == TRUE)
-		s = ldelete((RSIZE)n, (f & FFARG) ? KFORW : KNONE);
+		s = ldeletechar((RSIZE)n, (f & FFARG) ? KFORW : KNONE);
 
 	return (s);
 }

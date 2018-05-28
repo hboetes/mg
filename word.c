@@ -438,7 +438,7 @@ delfword(int f, int n)
 out:
 	curwp->w_dotp = dotp;
 	curwp->w_doto = doto;
-	return (ldelete(size, KFORW));
+	return (ldeletechar(size, KFORW));
 }
 
 /*
@@ -498,7 +498,7 @@ delbword(int f, int n)
 	/* undo assumed delete */
 	--size;
 out:
-	return (ldelete(size, KBACK));
+	return (ldeletechar(size, KBACK));
 }
 
 /*

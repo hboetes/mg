@@ -550,7 +550,7 @@ killmatches(int cond)
 			curwp->w_doto = 0;
 			curwp->w_dotp = clp;
 			count++;
-			s = ldelete(llength(clp) + 1, KNONE);
+			s = ldeletebyte(llength(clp) + 1, KNONE);
 			clp = curwp->w_dotp;
 			curwp->w_rflag |= WFMOVE;
 			if (s == FALSE)

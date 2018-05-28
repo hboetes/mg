@@ -206,7 +206,7 @@ killline(int f, int n)
 	 */
 done:
 	if (chunk)
-		return (ldelete(chunk, KFORW));
+		return (ldeletebyte(chunk, KFORW));
 	return (TRUE);
 }
 

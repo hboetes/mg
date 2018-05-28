@@ -179,7 +179,7 @@ fillpara(int f, int n)
 			c = lgetc(curwp->w_dotp, curwp->w_doto);
 
 		/* and then delete it */
-		if (ldelete((RSIZE) 1, KNONE) == FALSE && !eopflag) {
+		if (ldeletechar((RSIZE) 1, KNONE) == FALSE && !eopflag) {
 			retval = FALSE;
 			goto cleanup;
 		}
@@ -229,7 +229,7 @@ fillpara(int f, int n)
 				if (curwp->w_doto > 0 &&
 				    lgetc(curwp->w_dotp, curwp->w_doto - 1) == ' ') {
 					curwp->w_doto -= 1;
-					(void)ldelete((RSIZE) 1, KNONE);
+					(void)ldeletechar((RSIZE) 1, KNONE);
 				}
 				/* start a new line */
 				(void)lnewline();
