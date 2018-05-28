@@ -1,7 +1,7 @@
 .\"	$OpenBSD: mg.1,v 1.106 2017/12/11 07:27:07 jmc Exp $
 .\" This file is in the public domain.
 .\"
-.Dd $Mdocdate: December 11 2017 $
+.Dd $Mdocdate: May 28 2018 $
 .Dt MG 1
 .Os
 .Sh NAME
@@ -861,6 +861,8 @@ Sets the prefix string to be used by the 'prefix-region' command.
 Execute external command from mini-buffer.
 .It shell-command-on-region
 Provide the text in region to the shell command as input.
+.It show-raw-mode
+ASCII encoding mode.
 .It shrink-window
 Shrink current window by one line.
 The window immediately below is expanded to pick up the slack.
@@ -1091,5 +1093,3 @@ In order to use 8-bit characters (such as German umlauts), the Meta key
 needs to be disabled via the
 .Dq meta-key-mode
 command.
-.Pp
-Multi-byte character sets, such as UTF-8, are not supported.
