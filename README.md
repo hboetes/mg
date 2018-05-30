@@ -6,6 +6,13 @@ To disable, add the following line to your `.mg`
 set-default-mode "raw"
 ```
 
+# Upstream support of UTF-8
+
+Please read [Theo de Raadt's
+thoughts](https://marc.info/?t=152753252500001&r=1&w=2) on adding
+UTF-8 support to mg. Patches to make mg 8-bit clean are quite
+welcome!
+
 # PORTING MG AND USING LIBBSD
 
 I've maintained and ported mg for quite some time now and at first it
