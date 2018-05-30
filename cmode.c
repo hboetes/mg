@@ -430,7 +430,7 @@ findcolpos(const struct buffer *bp, const struct line *lp, int lo)
 			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
 			                          llength(lp) - i, &mbs);
 			int width = -1;
-			if (consumed < (size_t) -2) {
+			if (MBRTOWC_SUCCESSFUL(consumed)) {
 				width = wcwidth(wc);
 			}
 			if (width >= 0) {

@@ -152,7 +152,7 @@ lowerregion(int f, int n)
 		} else {
 			consumed = mbrtowc(&wc, &linep->l_text[loffs],
 			                   llength(linep) - loffs, &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				wcl = towlower(wc);
 				mbslen = wcrtomb(t, wcl, &mbs);
 				if (mbslen == consumed) {
@@ -218,7 +218,7 @@ upperregion(int f, int n)
 		} else {
 			consumed = mbrtowc(&wc, &linep->l_text[loffs],
 			                   llength(linep) - loffs, &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				wcu = towupper(wc);
 				mbslen = wcrtomb(t, wcu, &mbs);
 				if (mbslen == consumed) {

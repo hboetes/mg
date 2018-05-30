@@ -90,14 +90,14 @@ showcpos(int f, int n)
 			                   &clp->l_text[curwp->w_doto - offset],
 			                   llength(clp) - curwp->w_doto + offset,
 			                   &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				ismb = (offset < consumed);
 				snprintf(mbc, consumed + 1, "%s",
 				         &clp->l_text[curwp->w_doto - offset]);
 				mbc[consumed + 1] = '\0';
 				break;
 			} else {
-				memset(&mbs, 0, sizeof mbs);
+				mbs = (mbstate_t) { 0 };
 			}
 			offset++;
 		}
@@ -145,7 +145,7 @@ getcolpos(struct mgwin *wp)
 			                          llength(wp->w_dotp) - i,
 			                          &mbs);
 			int width = -1;
-			if (consumed < (size_t) -2) {
+			if (MBRTOWC_SUCCESSFUL(consumed)) {
 				width = wcwidth(wc);
 			}
 			if (width >= 0) {

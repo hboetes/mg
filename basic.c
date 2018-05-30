@@ -81,7 +81,7 @@ backchar(int f, int n)
 				size_t len = llength(clp) - s;
 				consumed = mbrtowc(&wc, &clp->l_text[s],
 				                   len, &mbs);
-				if (consumed < (size_t) -2) {
+				if (MBRTOWC_SUCCESSFUL(consumed)) {
 					curwp->w_doto -= offset;
 					break;
 				}
@@ -149,7 +149,7 @@ forwchar(int f, int n)
 			size_t len = llength(clp) - s;
 			size_t consumed = mbrtowc(&wc, &clp->l_text[s],
 				                  len, &mbs);
-			if (consumed && consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				curwp->w_doto += consumed;
 			} else {
 				curwp->w_doto++;
@@ -320,6 +320,49 @@ getgoal(struct line *dlp)
 }
 
 /*
+ * Perform the by-character stepping used in getbyteofcol() and
+ * getcolofbyte().
+ */
+static void
+advance(const struct line *lp, size_t *i, size_t *col)
+{
+	size_t advance_by = 1;
+	char tmp[5];
+	int c = lgetc(lp, *i);
+	if (c == '\t'
+#ifdef NOTAB
+		&& !(curbp->b_flag & BFNOTAB)
+#endif
+		) {
+		*col = (*col | 0x07) + 1;
+	} else if (iscntrl(c)) {
+		/* ASCII control characters are given as ^X or such */
+		*col += 2;
+	} else if (isprint(c)) {
+		*col += 1;
+	} else if (!(curbp->b_flag & BFSHOWRAW)) {
+		mbstate_t mbs = { 0 };
+		wchar_t wc = 0;
+		size_t consumed = mbrtowc(&wc, &lp->l_text[*i],
+		                          llength(lp) - *i, &mbs);
+		int width = -1;
+		if (MBRTOWC_SUCCESSFUL(consumed)) {
+			width = wcwidth(wc);
+		}
+		if (width >= 0) {
+			*col += width;
+			advance_by = consumed > 1 ? consumed : 1;
+		} else {
+			*col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+		}
+	} else {
+		*col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+	}
+
+	*i += advance_by;
+}
+
+/*
  * Return the byte offset within lp that is targetcol columns beyond
  * startbyte
  */
@@ -327,46 +370,17 @@ size_t
 getbyteofcol(const struct line *lp, const size_t startbyte,
              const size_t targetcol)
 {
-	int c;
-	size_t i, col = 0;
-	char tmp[5];
-	size_t advance_by = 1;
+	size_t i = startbyte;
+	size_t col = 0;
 
-	for (i = startbyte; i < llength(lp); i += advance_by) {
-		advance_by = 1;
-		c = lgetc(lp, i);
-		if (c == '\t'
-#ifdef	NOTAB
-		    && !(curbp->b_flag & BFNOTAB)
-#endif
-			) {
-			col |= 0x07;
-			col++;
-		} else if (iscntrl(c)) {
-			col += 2;
-		} else if (isprint(c)) {
-			col++;
-		} else if (!(curbp->b_flag & BFSHOWRAW)) {
-			mbstate_t mbs = { 0 };
-			wchar_t wc = 0;
-			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
-			                          llength(lp) - i, &mbs);
-			int width = -1;
-			if (consumed < (size_t) -2) {
-				width = wcwidth(wc);
-			}
-			if (width >= 0) {
-				col += width;
-				advance_by = consumed;
-			} else {
-				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
-			}
-		} else {
-			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
-		}
-		if (col > targetcol)
+	while(i < llength(lp)) {
+		advance(lp, &i, &col);
+
+		if (col > targetcol) {
 			break;
+		}
 	}
+
 	return (i);
 }
 
@@ -379,45 +393,14 @@ size_t
 getcolofbyte(const struct line *lp, const size_t startbyte,
              const size_t initial_col, const size_t targetoffset)
 {
-	int c;
-	size_t i, col = initial_col;
-	char tmp[5];
-	size_t advance_by = 1;
+	size_t i = startbyte;
+	size_t col = initial_col;
 
-	for (i = startbyte; i < llength(lp); i += advance_by) {
-		if (i >= targetoffset)
+	while (i < llength(lp)) {
+		if (i >= targetoffset) {
 			break;
-		advance_by = 1;
-		c = lgetc(lp, i);
-		if (c == '\t'
-#ifdef	NOTAB
-		    && !(curbp->b_flag & BFNOTAB)
-#endif
-			) {
-			col |= 0x07;
-			col++;
-		} else if (iscntrl(c)) {
-			col += 2;
-		} else if (isprint(c)) {
-			col++;
-		} else if (!(curbp->b_flag & BFSHOWRAW)) {
-			mbstate_t mbs = { 0 };
-			wchar_t wc = 0;
-			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
-			                          llength(lp) - i, &mbs);
-			int width = -1;
-			if (consumed < (size_t) -2) {
-				width = wcwidth(wc);
-			}
-			if (width >= 0) {
-				col += width;
-				advance_by = consumed;
-			} else {
-				col += snprintf(tmp, sizeof(tmp), "\\%o", c);
-			}
-		} else {
-			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
 		}
+		advance(lp, &i, &col);
 	}
 	return (col);
 }

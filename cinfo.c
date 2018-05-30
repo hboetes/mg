@@ -110,7 +110,7 @@ byteinword(const char *s, size_t k, size_t len) {
 	wchar_t wc = 0;
 	size_t consumed = mbrtowc(&wc, &s[k], len, &mbs);
 
-	if (consumed < (size_t) -2) {
+	if (MBRTOWC_SUCCESSFUL(consumed)) {
 		return iswalnum(wc);
 	}
 

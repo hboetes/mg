@@ -332,6 +332,7 @@ update(int modelinecolor)
 	int	 c, i;
 	int	 hflag;
 	int	 currow, curcol;
+	int	 octallen;
 	int	 offs, size;
 
 	if (charswaiting())
@@ -461,7 +462,7 @@ update(int modelinecolor)
 			size_t consumed = mbrtowc(&wc, &lp->l_text[i],
 			                          llength(lp) - i, &mbs);
 			int width = -1;
-			if (consumed < (size_t) -2) {
+			if (MBRTOWC_SUCCESSFUL(consumed)) {
 				width = wcwidth(wc);
 			} else {
 				memset(&mbs, 0, sizeof mbs);
@@ -470,12 +471,12 @@ update(int modelinecolor)
 				curcol += width;
 				i += (consumed - 1);
 			} else {
-				snprintf(tmp, sizeof(tmp), "\\%o", c);
-				curcol += strlen(tmp);
+				octallen = snprintf(tmp, sizeof(tmp), "\\%o", c);
+				curcol += (octallen > 0 ? octallen : 1);
 			}
 		} else {
-			snprintf(tmp, sizeof(tmp), "\\%o", c);
-			curcol += strlen(tmp);
+			octallen = snprintf(tmp, sizeof(tmp), "\\%o", c);
+			curcol += (octallen > 0 ? octallen : 1);
 		}
 		i++;
 	}
@@ -670,14 +671,23 @@ uline(int row, struct video *vvp, struct video *pvp)
 	int    seencols = 0;
 	mbstate_t mbs = { 0 };
 	wchar_t wc = 0;
+	int    wcw = 0;
+	size_t mbret = 0;
 
 	lastbyte = vvp->v_text;
 	while (seencols < ncol && *lastbyte) {
 		size_t consumed = mbrtowc(&wc, lastbyte,
 		    (vvp->v_text + ncol * MB_LEN_MAX - lastbyte), &mbs);
-		if (consumed < (size_t) -2) {
+		if (MBRTOWC_SUCCESSFUL(consumed)) {
 			lastbyte += consumed;
-			seencols += wcwidth(wc);
+			wcw = wcwidth(wc);
+
+			/* Control characters shouldn't be in vvp, but let's be safe. */
+			if (wcw < 0) {
+				wcw = 2;
+			}
+
+			seencols += wcw;
 		} else {
 			lastbyte++;
 			seencols++;
@@ -724,10 +734,15 @@ uline(int row, struct video *vvp, struct video *pvp)
 	}
 	if (cp1 == lastbyte)	/* All equal.		 */
 		return;
+
+	/* If we're inside byte-garbage, back up. */
+	mbret = mbrtowc(&wc, cp1, (lastbyte - cp1), &mbs);
 	while (cp1 != vvp->v_text && !isprint(*cp1) &&
-	       mbrtowc(&wc, cp1, (lastbyte - cp1), &mbs) >= (size_t) -2) {
+	       !MBRTOWC_SUCCESSFUL(mbret)) {
+		mbs = (mbstate_t) { 0 };
 		--cp1;
 		--cp2;
+		mbret = mbrtowc(&wc, cp1, (lastbyte - cp1), &mbs);
 	}
 	nbflag = FALSE;
 	cp3 = lastbyte;	/* Compute right match.  */
@@ -738,10 +753,14 @@ uline(int row, struct video *vvp, struct video *pvp)
 		if (cp3[0] != ' ')	/* Note non-blanks in	 */
 			nbflag = TRUE;	/* the right match.	 */
 	}
+
+	/* If we're in byte garbage, push forward out */
+	mbret = mbrtowc(&wc, cp3, (lastbyte - cp3), &mbs);
 	while (cp3 != lastbyte && !isprint(*cp3) &&
-	        mbrtowc(&wc, cp3, (lastbyte - cp3), &mbs) >= (size_t) -2) {
+	       !MBRTOWC_SUCCESSFUL(mbret)) {
 		++cp3;
 		++cp4;
+		mbret = mbrtowc(&wc, cp3, (lastbyte - cp3), &mbs);
 	}
 	cp5 = cp3;			/* Is erase good?	 */
 	if (nbflag == FALSE && vvp->v_color == CTEXT) {
@@ -757,9 +776,14 @@ uline(int row, struct video *vvp, struct video *pvp)
 	while ((cp1 - mbcounter) > 0) {
 		size_t consumed = mbrtowc(&wc, mbcounter, (cp1 - mbcounter),
 		                          &mbs);
-		if (consumed < (size_t) -2) {
+		if (MBRTOWC_SUCCESSFUL(consumed)) {
+			int wcw = wcwidth(wc);
 			mbcounter += consumed;
-			startcol += wcwidth(wc);
+			wcw = wcwidth(wc);
+			if (wcw < 0) {
+				wcw = 2;
+			}
+			startcol += wcw;
 		} else {
 			mbcounter++;
 			startcol++;
@@ -818,7 +842,6 @@ modeline(struct mgwin *wp, int modelinecolor)
 		n += vtputs("--", 0, n);
 	}
 	n += vtputs("-", 0, n);
-	n = 5;
 	n += vtputs("Mg: ", 0, n);
 	if (bp->b_bname[0] != '\0')
 		n += vtputs(&(bp->b_bname[0]), 0, n);
@@ -929,7 +952,7 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 			                          consumable, &mbs);
 			int width = -1;
 			last_full_byte_start = vtcol;
-			if (consumed < (size_t) -2) {
+			if (MBRTOWC_SUCCESSFUL(consumed)) {
 				width = wcwidth(wc);
 			}
 			if (width >= 0) {

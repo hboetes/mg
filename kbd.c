@@ -419,7 +419,7 @@ insert_char(int f, int n)
 	char *bufp;
 	char inpbuf[32];
 	wchar_t wc;
-	char mb[MB_LEN_MAX + 1];
+	char mb[MB_LEN_MAX];
 	mbstate_t mbs = { 0 };
 	size_t mbslen;
 	size_t i;

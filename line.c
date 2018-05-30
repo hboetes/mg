@@ -448,7 +448,7 @@ ldeletechar(RSIZE n, int kflag)
 				consumed = mbrtowc(&wc,
 				                   &dotp->l_text[doto],
 				                   len, &mbs);
-				if (consumed < (size_t) -2) {
+				if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 					new_n += consumed;
 					doto += consumed;
 				} else {

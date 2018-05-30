@@ -268,7 +268,7 @@ upperword(int f, int n)
 			o = curwp->w_doto;
 			consumed = mbrtowc(&wc, &clp->l_text[o],
 			                   llength(clp) - o, &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				wcu = towupper(wc);
 				mbslen = wcrtomb(t, wcu, &mbs);
 				if (mbslen == consumed) {
@@ -335,7 +335,7 @@ lowerword(int f, int n)
 			o = curwp->w_doto;
 			consumed = mbrtowc(&wc, &clp->l_text[o],
 			                   llength(clp) - o, &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				wcu = towlower(wc);
 				mbslen = wcrtomb(t, wcu, &mbs);
 				if (mbslen == consumed) {
@@ -405,7 +405,7 @@ capword(int f, int n)
 			o = curwp->w_doto;
 			consumed = mbrtowc(&wc, &clp->l_text[o],
 			                   llength(clp) - o, &mbs);
-			if (consumed < (size_t) -2) {
+			if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 				wcu = towupper(wc);
 				mbslen = wcrtomb(t, wcu, &mbs);
 				if (mbslen == consumed) {
@@ -427,7 +427,7 @@ capword(int f, int n)
 				o = curwp->w_doto;
 				consumed = mbrtowc(&wc, &clp->l_text[o],
 				                   llength(clp) - o, &mbs);
-				if (consumed < (size_t) -2) {
+				if (consumed && MBRTOWC_SUCCESSFUL(consumed)) {
 					wcl = towlower(wc);
 					mbslen = wcrtomb(t, wcl, &mbs);
 					if (mbslen == consumed) {

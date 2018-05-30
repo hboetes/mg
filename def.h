@@ -50,6 +50,11 @@ typedef int	(*PF)(int, int);	/* generally useful type */
 #define KCLEAR	2		/* clear echo area		 */
 
 /*
+ * Boilerplate for whether mbrtowc() returned successfully
+ */
+#define MBRTOWC_SUCCESSFUL(r) (((r) != (size_t) -1) && ((r) != (size_t) -2))
+
+/*
  * These flag bits keep track of
  * some aspects of the last command. The CFCPCN
  * flag controls goal column setting. The CFKILL
