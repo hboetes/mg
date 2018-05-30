@@ -15,12 +15,15 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <wchar.h>
+#include <wctype.h>
 
 #include "def.h"
 
@@ -118,7 +121,13 @@ lowerregion(int f, int n)
 {
 	struct line	*linep;
 	struct region	 region;
-	int	 loffs, c, s;
+	int		 loffs, s;
+	char		 t[MB_LEN_MAX + 1];
+	mbstate_t	 mbs = { 0 };
+	wchar_t		 wc = 0;
+	wchar_t		 wcl = 0;
+	size_t		 consumed = 0;
+	size_t		 mbslen = 0;
 
 	if ((s = checkdirty(curbp)) != TRUE)
 		return (s);
@@ -141,10 +150,26 @@ lowerregion(int f, int n)
 			linep = lforw(linep);
 			loffs = 0;
 		} else {
-			c = lgetc(linep, loffs);
-			if (ISUPPER(c) != FALSE)
-				lputc(linep, loffs, TOLOWER(c));
-			++loffs;
+			consumed = mbrtowc(&wc, &linep->l_text[loffs],
+			                   llength(linep) - loffs, &mbs);
+			if (consumed < (size_t) -2) {
+				wcl = towlower(wc);
+				mbslen = wcrtomb(t, wcl, &mbs);
+				if (mbslen == consumed) {
+					for (size_t k = 0; k < consumed; ++k) {
+						lputc(linep, loffs, t[k]);
+						loffs++;
+					}
+					if (consumed > 0) {
+						region.r_size -= (consumed - 1);
+					}
+				} else {
+					loffs++;
+				}
+			} else {
+				mbs = (mbstate_t) { 0 };
+				loffs++;
+			}
 		}
 	}
 	return (TRUE);
@@ -160,9 +185,15 @@ lowerregion(int f, int n)
 int
 upperregion(int f, int n)
 {
-	struct line	 *linep;
-	struct region	  region;
-	int	  loffs, c, s;
+	struct line	*linep;
+	struct region	 region;
+	int		 loffs, s;
+	char		 t[MB_LEN_MAX + 1];
+	mbstate_t	 mbs = { 0 };
+	wchar_t		 wc = 0;
+	wchar_t		 wcu = 0;
+	size_t		 consumed = 0;
+	size_t		 mbslen = 0;
 
 	if ((s = checkdirty(curbp)) != TRUE)
 		return (s);
@@ -171,6 +202,7 @@ upperregion(int f, int n)
 		ewprintf("Buffer is read-only");
 		return (FALSE);
 	}
+
 	if ((s = getregion(&region)) != TRUE)
 		return (s);
 
@@ -184,10 +216,26 @@ upperregion(int f, int n)
 			linep = lforw(linep);
 			loffs = 0;
 		} else {
-			c = lgetc(linep, loffs);
-			if (ISLOWER(c) != FALSE)
-				lputc(linep, loffs, TOUPPER(c));
-			++loffs;
+			consumed = mbrtowc(&wc, &linep->l_text[loffs],
+			                   llength(linep) - loffs, &mbs);
+			if (consumed < (size_t) -2) {
+				wcu = towupper(wc);
+				mbslen = wcrtomb(t, wcu, &mbs);
+				if (mbslen == consumed) {
+					for (size_t k = 0; k < consumed; ++k) {
+						lputc(linep, loffs, t[k]);
+						loffs++;
+					}
+					if (consumed > 0) {
+						region.r_size -= (consumed - 1);
+					}
+				} else {
+					loffs++;
+				}
+			} else {
+				mbs = (mbstate_t) { 0 };
+				loffs++;
+			}
 		}
 	}
 	return (TRUE);

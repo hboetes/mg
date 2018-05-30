@@ -53,7 +53,7 @@ struct ctag {
 	char *pat;
 };
 RB_HEAD(tagtree, ctag) tags = RB_INITIALIZER(&tags);
-RB_GENERATE(tagtree, ctag, entry, ctagcmp);
+RB_GENERATE(tagtree, ctag, entry, ctagcmp)
 
 struct tagpos {
 	SLIST_ENTRY(tagpos) entry;
@@ -437,10 +437,15 @@ searchpat(char *s_pat)
 int
 atbow(void)
 {
+	size_t len = llength(curwp->w_dotp);
+	struct line *clp = curwp->w_dotp;
+	size_t o = curwp->w_doto;
+
 	if (curwp->w_doto == 0)
 		return (TRUE);
-	if (ISWORD(curwp->w_dotp->l_text[curwp->w_doto]) &&
-	    !ISWORD(curwp->w_dotp->l_text[curwp->w_doto - 1]))
+
+	if (byteinword(clp->l_text, o, len - o) &&
+	    !byteinword(clp->l_text, o - 1, 1))
 	    	return (TRUE);
 	return (FALSE);
 }
@@ -453,15 +458,13 @@ curtoken(int f, int n, char *token)
 {
 	struct line *odotp;
 	int odoto, tdoto, odotline, size, r;
-	char c;
 	
 	/* Underscore character is to be treated as "inword" while
 	 * processing tokens unlike mg's default word traversal. Save
 	 * and restore it's cinfo value so that tag matching works for
 	 * identifier with underscore.
 	 */
-	c = cinfo['_'];
-	cinfo['_'] = _MG_W;
+	treatunderscoreasword(1);
 	
 	odotp = curwp->w_dotp;
 	odoto = curwp->w_doto;
@@ -495,10 +498,10 @@ curtoken(int f, int n, char *token)
 	r = TRUE;
 	
 cleanup:
-	cinfo['_'] = c;
 	curwp->w_dotp = odotp;
 	curwp->w_doto = odoto;
 	curwp->w_dotline = odotline;
+	treatunderscoreasword(0);
 	return (r);
 }
 

@@ -13,6 +13,7 @@
 
 #include <sys/queue.h>
 #include <ctype.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -216,8 +217,8 @@ vtresize(int force, int newrow, int newcol)
 	}
 	if (rowchanged || colchanged || first_run) {
 		for (i = 0; i < 2 * (newrow - 1); i++)
-			TRYREALLOC(video[i].v_text, newcol * MB_CUR_MAX);
-		TRYREALLOC(blanks.v_text, newcol * MB_CUR_MAX);
+			TRYREALLOC(video[i].v_text, newcol * MB_LEN_MAX);
+		TRYREALLOC(blanks.v_text, newcol * MB_LEN_MAX);
 	}
 
 	nrow = newrow;
@@ -260,7 +261,7 @@ vtinit(void)
 	 */
 
 	blanks.v_color = CTEXT;
-	for (i = 0; i < ncol * MB_CUR_MAX; ++i)
+	for (i = 0; i < ncol * MB_LEN_MAX; ++i)
 		blanks.v_text[i] = ' ';
 }
 
@@ -308,7 +309,7 @@ vteeol(void)
 	struct video *vp;
 
 	vp = vscreen[vtrow];
-	while (vtcol < ncol * MB_CUR_MAX)
+	while (vtcol < ncol * MB_LEN_MAX)
 		vp->v_text[vtcol++] = ' ';
 }
 
@@ -450,7 +451,7 @@ update(int modelinecolor)
 			while ((curcol - lbound) & 0x07) {
 				curcol++;
 			}
-		} else if (ISCTRL(c) != FALSE)
+		} else if (iscntrl(c) != FALSE)
 			curcol += 2;
 		else if (isprint(c)) {
 			curcol++;
@@ -605,7 +606,7 @@ ucopy(struct video *vvp, struct video *pvp)
 	pvp->v_hash = vvp->v_hash;
 	pvp->v_cost = vvp->v_cost;
 	pvp->v_color = vvp->v_color;
-	bcopy(vvp->v_text, pvp->v_text, ncol * MB_CUR_MAX);
+	bcopy(vvp->v_text, pvp->v_text, ncol * MB_LEN_MAX);
 }
 
 /*
@@ -673,7 +674,7 @@ uline(int row, struct video *vvp, struct video *pvp)
 	lastbyte = vvp->v_text;
 	while (seencols < ncol && *lastbyte) {
 		size_t consumed = mbrtowc(&wc, lastbyte,
-		    (vvp->v_text + ncol * MB_CUR_MAX - lastbyte), &mbs);
+		    (vvp->v_text + ncol * MB_LEN_MAX - lastbyte), &mbs);
 		if (consumed < (size_t) -2) {
 			lastbyte += consumed;
 			seencols += wcwidth(wc);
@@ -898,7 +899,7 @@ vtputs(const char *s, const size_t max_bytes, const size_t initial_col)
 			         ((space_printed + initial_col) & 0x07));
 			us++;
 			bytes_handled++;
-		} else if (ISCTRL(*us)) {
+		} else if (iscntrl(*us)) {
 			last_full_byte_start = vtcol;
 			if (vtcol >= 0) {
 				vp->v_text[vtcol] = '^';
@@ -989,11 +990,11 @@ hash(struct video *vp)
 	char   *s;
 
 	if ((vp->v_flag & VFHBAD) != 0) {	/* Hash bad.		 */
-		s = &vp->v_text[ncol * MB_CUR_MAX - 1];
-		for (i = ncol * MB_CUR_MAX; i != 0; --i, --s)
+		s = &vp->v_text[ncol * MB_LEN_MAX - 1];
+		for (i = ncol * MB_LEN_MAX; i != 0; --i, --s)
 			if (*s != ' ')
 				break;
-		n = ncol * MB_CUR_MAX - i;			/* Erase cheaper?	 */
+		n = ncol * MB_LEN_MAX - i;			/* Erase cheaper?	 */
 		if (n > tceeol)
 			n = tceeol;
 		vp->v_cost = i + n;		/* Bytes + blanks.	 */

@@ -87,7 +87,7 @@ backchar(int f, int n)
 				}
 				mbs = (mbstate_t) { 0 };
 				offset++;
-				if (offset > MB_CUR_MAX) {
+				if (offset > MB_LEN_MAX) {
 					break;
 				}
 			}
@@ -342,7 +342,7 @@ getbyteofcol(const struct line *lp, const size_t startbyte,
 			) {
 			col |= 0x07;
 			col++;
-		} else if (ISCTRL(c) != FALSE) {
+		} else if (iscntrl(c)) {
 			col += 2;
 		} else if (isprint(c)) {
 			col++;
@@ -396,7 +396,7 @@ getcolofbyte(const struct line *lp, const size_t startbyte,
 			) {
 			col |= 0x07;
 			col++;
-		} else if (ISCTRL(c) != FALSE) {
+		} else if (iscntrl(c)) {
 			col += 2;
 		} else if (isprint(c)) {
 			col++;

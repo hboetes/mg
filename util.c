@@ -11,6 +11,7 @@
 
 #include <sys/queue.h>
 #include <ctype.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +39,7 @@ showcpos(int f, int n)
 	int	 ratio;
 	char	 ismb = 0;
 	wchar_t	 wc = 0;
-	char	 mbc[MB_CUR_MAX + 1];
+	char	 mbc[MB_LEN_MAX + 1];
 
 	/* collect the data */
 	clp = bfirstlp(curbp);
@@ -82,7 +83,7 @@ showcpos(int f, int n)
 		size_t offset = 0;
 		while (cbyte != '\n' && offset <= curwp->w_doto) {
 			int c = lgetc(clp, curwp->w_doto - offset);
-			if (isprint(c) || (ISCTRL(c) != FALSE)) {
+			if (isprint(c) || (iscntrl(c) != FALSE)) {
 				break;
 			}
 			consumed = mbrtowc(&wc,
@@ -133,7 +134,7 @@ getcolpos(struct mgwin *wp)
 			) {
 			col |= 0x07;
 			col++;
-		} else if (ISCTRL(c) != FALSE)
+		} else if (iscntrl(c) != FALSE)
 			col += 2;
 		else if (isprint(c)) {
 			col++;

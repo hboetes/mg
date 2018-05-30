@@ -6,6 +6,8 @@
  *	Terminal independent keyboard handling.
  */
 
+#include <ctype.h>
+#include <limits.h>
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdio.h>
@@ -170,8 +172,8 @@ rescan(int f, int n)
 	int	 md = curbp->b_nmodes;
 
 	for (;;) {
-		if (ISUPPER(key.k_chars[key.k_count - 1])) {
-			c = TOLOWER(key.k_chars[key.k_count - 1]);
+		if (isupper(key.k_chars[key.k_count - 1])) {
+			c = tolower(key.k_chars[key.k_count - 1]);
 			curmap = curbp->b_modes[md]->p_map;
 			for (i = 0; i < key.k_count - 1; i++) {
 				if ((fp = doscan(curmap, (key.k_chars[i]),
@@ -417,7 +419,7 @@ insert_char(int f, int n)
 	char *bufp;
 	char inpbuf[32];
 	wchar_t wc;
-	char mb[MB_CUR_MAX + 1];
+	char mb[MB_LEN_MAX + 1];
 	mbstate_t mbs = { 0 };
 	size_t mbslen;
 	size_t i;

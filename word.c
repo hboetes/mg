@@ -11,9 +11,12 @@
 #include <sys/queue.h>
 #include <signal.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
 
 #include "def.h"
 
@@ -231,8 +234,16 @@ grabword(char **word)
 int
 upperword(int f, int n)
 {
-	int	c, s;
-	RSIZE	size;
+	int		 s;
+	RSIZE		 size;
+	mbstate_t	 mbs = { 0 };
+	wchar_t		 wc = 0;
+	wchar_t		 wcu = 0;
+	size_t		 consumed = 0;
+	size_t		 mbslen = 0;
+	struct line 	*clp;
+	size_t		 o;
+	char		 t[MB_LEN_MAX + 1];
 
 	if ((s = checkdirty(curbp)) != TRUE)
 		return (s);
@@ -253,12 +264,28 @@ upperword(int f, int n)
 		undo_add_change(curwp->w_dotp, curwp->w_doto, size);
 
 		while (inword() != FALSE) {
-			c = lgetc(curwp->w_dotp, curwp->w_doto);
-			if (ISLOWER(c) != FALSE) {
-				c = TOUPPER(c);
-				lputc(curwp->w_dotp, curwp->w_doto, c);
-				lchange(WFFULL);
+			clp = curwp->w_dotp;
+			o = curwp->w_doto;
+			consumed = mbrtowc(&wc, &clp->l_text[o],
+			                   llength(clp) - o, &mbs);
+			if (consumed < (size_t) -2) {
+				wcu = towupper(wc);
+				mbslen = wcrtomb(t, wcu, &mbs);
+				if (mbslen == consumed) {
+					for (size_t k = 0; k < consumed; ++k) {
+						lputc(clp, o, t[k]);
+						o++;
+					}
+				} else {
+					o++;
+				}
+			} else {
+				mbs = (mbstate_t) { 0 };
+				o++;
 			}
+
+			lchange(WFFULL);
+
 			if (forwchar(FFRAND, 1) == FALSE)
 				return (TRUE);
 		}
@@ -274,8 +301,16 @@ upperword(int f, int n)
 int
 lowerword(int f, int n)
 {
-	int	c, s;
-	RSIZE	size;
+	int		 s;
+	RSIZE		 size;
+	mbstate_t	 mbs = { 0 };
+	wchar_t		 wc = 0;
+	wchar_t		 wcu = 0;
+	size_t		 consumed = 0;
+	size_t		 mbslen = 0;
+	struct line 	*clp;
+	size_t		 o;
+	char		 t[MB_LEN_MAX + 1];
 
 	if ((s = checkdirty(curbp)) != TRUE)
 		return (s);
@@ -284,6 +319,7 @@ lowerword(int f, int n)
 		ewprintf("Buffer is read-only");
 		return (FALSE);
 	}
+
 	if (n < 0)
 		return (FALSE);
 	while (n--) {
@@ -295,12 +331,28 @@ lowerword(int f, int n)
 		undo_add_change(curwp->w_dotp, curwp->w_doto, size);
 
 		while (inword() != FALSE) {
-			c = lgetc(curwp->w_dotp, curwp->w_doto);
-			if (ISUPPER(c) != FALSE) {
-				c = TOLOWER(c);
-				lputc(curwp->w_dotp, curwp->w_doto, c);
-				lchange(WFFULL);
+			clp = curwp->w_dotp;
+			o = curwp->w_doto;
+			consumed = mbrtowc(&wc, &clp->l_text[o],
+			                   llength(clp) - o, &mbs);
+			if (consumed < (size_t) -2) {
+				wcu = towlower(wc);
+				mbslen = wcrtomb(t, wcu, &mbs);
+				if (mbslen == consumed) {
+					for (size_t k = 0; k < consumed; ++k) {
+						lputc(clp, o, t[k]);
+						o++;
+					}
+				} else {
+					o++;
+				}
+			} else {
+				mbs = (mbstate_t) { 0 };
+				o++;
 			}
+
+			lchange(WFFULL);
+
 			if (forwchar(FFRAND, 1) == FALSE)
 				return (TRUE);
 		}
@@ -318,8 +370,17 @@ lowerword(int f, int n)
 int
 capword(int f, int n)
 {
-	int	c, s;
-	RSIZE	size;
+	int		 s;
+	RSIZE		 size;
+	mbstate_t	 mbs = { 0 };
+	wchar_t		 wc = 0;
+	wchar_t		 wcu = 0;
+	wchar_t		 wcl = 0;
+	size_t		 consumed = 0;
+	size_t		 mbslen = 0;
+	struct line	*clp;
+	size_t		 o;
+	char		 t[MB_LEN_MAX + 1];
 
 	if ((s = checkdirty(curbp)) != TRUE)
 		return (s);
@@ -340,21 +401,46 @@ capword(int f, int n)
 		undo_add_change(curwp->w_dotp, curwp->w_doto, size);
 
 		if (inword() != FALSE) {
-			c = lgetc(curwp->w_dotp, curwp->w_doto);
-			if (ISLOWER(c) != FALSE) {
-				c = TOUPPER(c);
-				lputc(curwp->w_dotp, curwp->w_doto, c);
-				lchange(WFFULL);
-			}
-			if (forwchar(FFRAND, 1) == FALSE)
-				return (TRUE);
-			while (inword() != FALSE) {
-				c = lgetc(curwp->w_dotp, curwp->w_doto);
-				if (ISUPPER(c) != FALSE) {
-					c = TOLOWER(c);
-					lputc(curwp->w_dotp, curwp->w_doto, c);
+			clp = curwp->w_dotp;
+			o = curwp->w_doto;
+			consumed = mbrtowc(&wc, &clp->l_text[o],
+			                   llength(clp) - o, &mbs);
+			if (consumed < (size_t) -2) {
+				wcu = towupper(wc);
+				mbslen = wcrtomb(t, wcu, &mbs);
+				if (mbslen == consumed) {
+					for (size_t k = 0; k < consumed; ++k) {
+						lputc(clp, o, t[k]);
+						o++;
+					}
 					lchange(WFFULL);
 				}
+			} else {
+				mbs = (mbstate_t) { 0 };
+			}
+
+			if (forwchar(FFRAND, 1) == FALSE)
+				return (TRUE);
+
+			while (inword() != FALSE) {
+				clp = curwp->w_dotp;
+				o = curwp->w_doto;
+				consumed = mbrtowc(&wc, &clp->l_text[o],
+				                   llength(clp) - o, &mbs);
+				if (consumed < (size_t) -2) {
+					wcl = towlower(wc);
+					mbslen = wcrtomb(t, wcl, &mbs);
+					if (mbslen == consumed) {
+						for (size_t k = 0; k < consumed; ++k) {
+							lputc(clp, o, t[k]);
+							o++;
+						}
+						lchange(WFFULL);
+					}
+				} else {
+					mbs = (mbstate_t) { 0 };
+				}
+
 				if (forwchar(FFRAND, 1) == FALSE)
 					return (TRUE);
 			}
@@ -364,7 +450,7 @@ capword(int f, int n)
 }
 
 /*
- * Count characters in word, from current position
+ * Count bytes in word, from current position
  */
 RSIZE
 countfword()
@@ -372,16 +458,24 @@ countfword()
 	RSIZE		 size;
 	struct line	*dotp;
 	int		 doto;
+	struct line	*last_dotp;
+	int		 last_doto;
 
 	dotp = curwp->w_dotp;
 	doto = curwp->w_doto;
 	size = 0;
 
 	while (inword() != FALSE) {
+		last_dotp = curwp->w_dotp;
+		last_doto = curwp->w_doto;
 		if (forwchar(FFRAND, 1) == FALSE)
 			/* hit the end of the buffer */
 			goto out;
-		++size;
+		if (last_dotp == curwp->w_dotp) {
+			size += (curwp->w_doto - last_doto);
+		} else {
+			size++;
+		}
 	}
 out:
 	curwp->w_dotp = dotp;
@@ -509,6 +603,7 @@ int
 inword(void)
 {
 	/* can't use lgetc in ISWORD due to bug in OSK cpp */
-	return (curwp->w_doto != llength(curwp->w_dotp) &&
-	    ISWORD(curwp->w_dotp->l_text[curwp->w_doto]));
+	size_t l = llength(curwp->w_dotp);
+	size_t k = curwp->w_doto;
+	return (k != l) && byteinword(curwp->w_dotp->l_text, k, l - k);
 }

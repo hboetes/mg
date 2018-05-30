@@ -24,6 +24,16 @@ static int	findpara(void);
 static int 	do_gotoeop(int, int, int *);
 
 /*
+ * Returns non-zero iff c is "end of sentence punctuation". Used
+ * only for determining whether to double-space sentences.
+ */
+static int
+iseosp(int c)
+{
+	return (c == '?' || c == '!' || c == '.');
+}
+
+/*
  * Move to start of paragraph.
  * Move backwards by line, checking from the 1st character forwards for the
  * existence a non-space. If a non-space character is found, move to the 
@@ -207,13 +217,16 @@ fillpara(int f, int n)
 			 * character was one of '.','?','!' doublespace here.
 			 * behave the same way if a ')' is preceded by a
 			 * [.?!] and followed by a doublespace.
+			 *
+			 * These rules are too complicated for multibyte
+			 * characters, so they just get single-spaced.
 			 */
 			if (dblspace && (!eopflag && ((eolflag ||
 			    curwp->w_doto == llength(curwp->w_dotp) ||
 			    (c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' '
-			    || c == '\t') && (ISEOSP(wbuf[wordlen - 1]) ||
+			    || c == '\t') && (iseosp(wbuf[wordlen - 1]) ||
 			    (wbuf[wordlen - 1] == ')' && wordlen >= 2 &&
-			    ISEOSP(wbuf[wordlen - 2])))) &&
+			    iseosp(wbuf[wordlen - 2])))) &&
 			    wordlen < MAXWORD - 1))
 				wbuf[wordlen++] = ' ';
 
@@ -421,7 +434,7 @@ fillword(int f, int n)
 #endif
 			)
 			col |= 0x07;
-		else if (ISCTRL(c) != FALSE)
+		else if (iscntrl(c) != FALSE)
 			++col;
 	}
 	if (curwp->w_doto != llength(curwp->w_dotp)) {

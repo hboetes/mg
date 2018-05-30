@@ -13,7 +13,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include	"chrdef.h"
+/*
+ * Generally useful thing for chars
+ */
+#define CCHR(x)		((x) ^ 0x40)	/* CCHR('?') == DEL */
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #  define LOGIN_NAME_MAX _POSIX_LOGIN_NAME_MAX
@@ -155,7 +158,7 @@ struct line {
  */
 #define lforw(lp)	((lp)->l_fp)
 #define lback(lp)	((lp)->l_bp)
-#define lgetc(lp, n)	(CHARMASK((lp)->l_text[(n)]))
+#define lgetc(lp, n)	((unsigned char)((lp)->l_text[(n)]))
 #define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
 #define llength(lp)	((lp)->l_used)
 #define ltext(lp)	((lp)->l_text)
@@ -506,7 +509,9 @@ int		 quit(int, int);
 void		 panic(char *);
 
 /* cinfo.c */
+void		 treatunderscoreasword(int);
 char		*getkeyname(char  *, size_t, int);
+int		 byteinword(const char *, size_t, size_t);
 
 /* basic.c */
 int		 gotobol(int, int);

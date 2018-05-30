@@ -10,6 +10,7 @@
  * but there's enough overhead in the editor as it is.
  */
 
+#include <ctype.h>
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdio.h>
@@ -172,7 +173,7 @@ displaymatch(struct line *clp, int cbo)
 			    || (curbp->b_flag & BFNOTAB)
 #endif
 				)
-				if (ISCTRL(c)) {
+				if (iscntrl(c)) {
 					buf[bufo++] = '^';
 					buf[bufo++] = CCHR(c);
 				} else

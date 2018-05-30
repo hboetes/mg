@@ -6,6 +6,7 @@
  * Help functions for Mg 2
  */
 
+#include <ctype.h>
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdio.h>
@@ -57,9 +58,9 @@ desckey(int f, int n)
 		}
 		if (funct != rescan)
 			break;
-		if (ISUPPER(key.k_chars[key.k_count - 1])) {
+		if (isupper(key.k_chars[key.k_count - 1])) {
 			funct = doscan(curmap,
-			    TOLOWER(key.k_chars[key.k_count - 1]), &curmap);
+			    tolower(key.k_chars[key.k_count - 1]), &curmap);
 			if (funct == NULL) {
 				*pep++ = '-';
 				*pep = '\0';

@@ -105,7 +105,7 @@ kremove(int n)
 {
 	if (n < 0 || n + kstart >= kused)
 		return (-1);
-	return (CHARMASK(kbufp[n + kstart]));
+	return ((unsigned char)(kbufp[n + kstart]));
 }
 
 /*

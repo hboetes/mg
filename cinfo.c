@@ -10,92 +10,25 @@
  * ctype.h) don't let you ask.
  */
 
+#include <ctype.h>
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
 
 #include "def.h"
 
-/*
- * This table, indexed by a character drawn
- * from the 256 member character set, is used by my
- * own character type macros to answer questions about the
- * type of a character. It handles the full multinational
- * character set, and lets me ask some questions that the
- * standard "ctype" macros cannot ask.
+/* Flag for treating '_' as word-like byte
  */
-/*
- * Due to incompatible behaviour between "standard" emacs and
- * ctags word traversing, '_' character's value is changed on 
- * the fly in ctags mode, hence non-const.
- */
-char cinfo[256] = {
-	_MG_C, _MG_C, _MG_C, _MG_C,				      /* 0x0X */
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	_MG_C, _MG_C, _MG_C, _MG_C,				      /* 0x1X */
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	_MG_C, _MG_C, _MG_C, _MG_C,
-	0, _MG_P, 0, 0,						      /* 0x2X */
-	_MG_W, _MG_W, 0, _MG_W,
-	0, 0, 0, 0,
-	0, 0, _MG_P, 0,
-	_MG_D | _MG_W, _MG_D | _MG_W, _MG_D | _MG_W, _MG_D | _MG_W,   /* 0x3X */
-	_MG_D | _MG_W, _MG_D | _MG_W, _MG_D | _MG_W, _MG_D | _MG_W,
-	_MG_D | _MG_W, _MG_D | _MG_W, 0, 0,
-	0, 0, 0, _MG_P,
-	0, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,		      /* 0x4X */
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,   /* 0x5X */
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, 0,
-	0, 0, 0, 0,
-	0, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,		      /* 0x6X */
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,   /* 0x7X */
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, 0,
-	0, 0, 0, _MG_C,
-	0, 0, 0, 0,						      /* 0x8X */
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,						      /* 0x9X */
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,						      /* 0xAX */
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,						      /* 0xBX */
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,   /* 0xCX */
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	0, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,		      /* 0xDX */
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W, _MG_U | _MG_W,
-	_MG_U | _MG_W, _MG_U | _MG_W, 0, _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,   /* 0xEX */
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	0, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,		      /* 0xFX */
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W, _MG_L | _MG_W,
-	_MG_L | _MG_W, _MG_L | _MG_W, 0, 0
-};
+static int underscoreisword;
+
+void
+treatunderscoreasword(int i)
+{
+	underscoreisword = i;
+}
 
 /*
  * Find the name of a keystroke.  Needs to be changed to handle 8-bit printing
@@ -109,7 +42,7 @@ getkeyname(char *cp, size_t len, int k)
 	size_t		 copied;
 
 	if (k < 0)
-		k = CHARMASK(k);	/* sign extended char */
+		k = (unsigned char)(k);	/* sign extended char */
 	switch (k) {
 	case CCHR('@'):
 		np = "C-SPC";
@@ -144,8 +77,8 @@ getkeyname(char *cp, size_t len, int k)
 			*cp++ = 'C';
 			*cp++ = '-';
 			k = CCHR(k);
-			if (ISUPPER(k))
-				k = TOLOWER(k);
+			if (isupper(k))
+				k = tolower(k);
 		}
 		*cp++ = k;
 		*cp = '\0';
@@ -155,4 +88,32 @@ getkeyname(char *cp, size_t len, int k)
 	if (copied >= len)
 		copied = len - 1;
 	return (cp + copied);
+}
+
+/*
+   Returns non-zero iff s[k] is a character (or the start of a
+   multibyte character, we won't examine more than "len" bytes)
+   which we consider to be "inside a word".  In practice, this means
+   alphanumerics, "$", "%", "'". We'd also like to sometimes include
+   "_", but that's rare enough that we'll handle it at the relevant
+   call site.
+ */
+int
+byteinword(const char *s, size_t k, size_t len) {
+	if (s[k] == '$' || s[k] == '%' || s[k] == '\'') {
+		return 1;
+	} else if (s[k] == '_') {
+		return underscoreisword;
+	}
+
+	mbstate_t mbs = { 0 };
+	wchar_t wc = 0;
+	size_t consumed = mbrtowc(&wc, &s[k], len, &mbs);
+
+	if (consumed < (size_t) -2) {
+		return iswalnum(wc);
+	}
+
+	/* If we're in byte-garbage: sure, whatever */
+	return 1;
 }

@@ -420,7 +420,7 @@ findcolpos(const struct buffer *bp, const struct line *lp, int lo)
 			) {
 			col |= 0x07;
 			col++;
-		} else if (ISCTRL(c) != FALSE) {
+		} else if (iscntrl(c) != FALSE) {
 			col += 2;
 		} else if (isprint(c)) {
 			col++;

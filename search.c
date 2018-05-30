@@ -322,7 +322,7 @@ isearch(int dir)
 			/* if the search is case insensitive, add to pattern using lowercase */
 			xcase = 0;
 			for (i = 0; pat[i]; i++)
-				if (ISUPPER(CHARMASK(pat[i])))
+				if (isupper((unsigned char)pat[i]))
 					xcase = 1;
 
 			while (cbo < llength(clp)) {
@@ -335,8 +335,8 @@ isearch(int dir)
 					break;
 				}
 				firstc = 0;
-				if (!xcase && ISUPPER(c))
-					c = TOLOWER(c);
+				if (!xcase && isupper(c))
+					c = tolower(c);
 
 				pat[pptr++] = c;
 				pat[pptr] = '\0';
@@ -364,7 +364,7 @@ isearch(int dir)
 			c = CCHR('J');
 			goto addchar;
 		default:
-			if (ISCTRL(c)) {
+			if (iscntrl(c)) {
 				ungetkey(c);
 				curwp->w_markp = clp;
 				curwp->w_marko = cbo;
@@ -694,7 +694,7 @@ forwsrch(void)
 	cbo = curwp->w_doto;
 	nline = curwp->w_dotline;
 	for (i = 0; pat[i]; i++)
-		if (ISUPPER(CHARMASK(pat[i])))
+		if (isupper((unsigned char)pat[i]))
 			xcase = 1;
 	for (;;) {
 		if (cbo == llength(clp)) {
@@ -755,7 +755,7 @@ backsrch(void)
 	cbo = curwp->w_doto;
 	nline = curwp->w_dotline;
 	for (i = 0; pat[i]; i++)
-		if (ISUPPER(CHARMASK(pat[i])))
+		if (isupper((unsigned char)pat[i]))
 			xcase = 1;
 	for (;;) {
 		if (cbo == 0) {
@@ -809,16 +809,16 @@ fail:		;
 static int
 eq(int bc, int pc, int xcase)
 {
-	bc = CHARMASK(bc);
-	pc = CHARMASK(pc);
+	bc = (unsigned char)bc;
+	pc = (unsigned char)pc;
 	if (bc == pc)
 		return (TRUE);
 	if (xcase)
 		return (FALSE);
-	if (ISUPPER(bc))
-		return (TOLOWER(bc) == pc);
-	if (ISUPPER(pc))
-		return (bc == TOLOWER(pc));
+	if (isupper(bc))
+		return (tolower(bc) == pc);
+	if (isupper(pc))
+		return (bc == tolower(pc));
 	return (FALSE);
 }
 

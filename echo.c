@@ -9,6 +9,7 @@
  * of the display screen. Used by the entire known universe.
  */
 
+#include <ctype.h>
 #include <sys/queue.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -187,6 +188,7 @@ static char *
 veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 {
 	int	 dynbuf = (buf == NULL);
+	size_t   buf_len;
 	int	 cpos, epos;		/* cursor, end position in buf */
 	int	 c, i, y;
 	int	 cplflag;		/* display completion list */
@@ -215,6 +217,11 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 	epos = cpos = 0;
 	ml = mr = esc = 0;
 	cplflag = FALSE;
+	if (buf == NULL) {
+		buf_len = 0;
+	} else {
+		buf_len = strlen(buf);
+	}
 
 	if ((flag & EFNEW) != 0 || ttrow != nrow - 1) {
 		ttcolor(CTEXT);
@@ -227,7 +234,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 		if (buf == NULL)
 			return (NULL);
 		eputs(buf);
-		epos = cpos += strlen(buf);
+		epos = cpos += buf_len;
 	}
 	tteeol();
 	ttflush();
@@ -275,7 +282,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 		switch (c) {
 		case CCHR('A'): /* start of line */
 			while (cpos > 0) {
-				if (ISCTRL(buf[--cpos]) != FALSE) {
+				if (iscntrl(buf[--cpos]) != FALSE) {
 					ttputc('\b');
 					--ttcol;
 				}
@@ -306,7 +313,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 			break;
 		case CCHR('B'): /* back */
 			if (cpos > 0) {
-				if (ISCTRL(buf[--cpos]) != FALSE) {
+				if (iscntrl(buf[--cpos]) != FALSE) {
 					ttputc('\b');
 					--ttcol;
 				}
@@ -411,7 +418,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 				epos--;
 				ttputc('\b');
 				ttcol--;
-				if (ISCTRL(y) != FALSE) {
+				if (iscntrl(y) != FALSE) {
 					ttputc('\b');
 					ttcol--;
 				}
@@ -422,7 +429,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 					eputc(buf[i]);
 				}
 				ttputc(' ');
-				if (ISCTRL(y) != FALSE) {
+				if (iscntrl(y) != FALSE) {
 					ttputc(' ');
 					ttputc('\b');
 				}
@@ -438,7 +445,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 				ttputc(' ');
 				ttputc('\b');
 				--ttcol;
-				if (ISCTRL(buf[--cpos]) != FALSE) {
+				if (iscntrl(buf[--cpos]) != FALSE) {
 					ttputc('\b');
 					ttputc(' ');
 					ttputc('\b');
@@ -449,12 +456,12 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 			ttflush();
 			break;
 		case CCHR('W'):			/* kill to beginning of word */
-			while ((cpos > 0) && !ISWORD(buf[cpos - 1])) {
+			while ((cpos > 0) && !byteinword(buf, cpos - 1, buf_len - cpos + 1)) {
 				ttputc('\b');
 				ttputc(' ');
 				ttputc('\b');
 				--ttcol;
-				if (ISCTRL(buf[--cpos]) != FALSE) {
+				if (iscntrl(buf[--cpos]) != FALSE) {
 					ttputc('\b');
 					ttputc(' ');
 					ttputc('\b');
@@ -462,12 +469,12 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 				}
 				epos--;
 			}
-			while ((cpos > 0) && ISWORD(buf[cpos - 1])) {
+			while ((cpos > 0) && byteinword(buf, cpos - 1, buf_len - cpos + 1)) {
 				ttputc('\b');
 				ttputc(' ');
 				ttputc('\b');
 				--ttcol;
-				if (ISCTRL(buf[--cpos]) != FALSE) {
+				if (iscntrl(buf[--cpos]) != FALSE) {
 					ttputc('\b');
 					ttputc(' ');
 					ttputc('\b');
@@ -797,6 +804,7 @@ int
 getxtra(struct list *lp1, struct list *lp2, int cpos, int wflag)
 {
 	int	i;
+	size_t	name_len = strlen(lp1->l_name);
 
 	i = cpos;
 	for (;;) {
@@ -805,7 +813,7 @@ getxtra(struct list *lp1, struct list *lp2, int cpos, int wflag)
 		if (lp1->l_name[i] == '\0')
 			break;
 		++i;
-		if (wflag && !ISWORD(lp1->l_name[i - 1]))
+		if (wflag && !byteinword(lp1->l_name, i - 1, name_len - i + 1))
 			break;
 	}
 	return (i - cpos);
@@ -982,7 +990,7 @@ static void
 eputc(char c)
 {
 	if (ttcol + 2 < ncol) {
-		if (ISCTRL(c)) {
+		if (iscntrl(c)) {
 			eputc('^');
 			c = CCHR(c);
 		}

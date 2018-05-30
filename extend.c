@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chrdef.h"
 #include "def.h"
 #include "funmap.h"
 #include "kbd.h"
@@ -349,7 +348,7 @@ dobind(KEYMAP *curmap, const char *p, int unbind)
 	}
 	if (inmacro) {
 		for (s = 0; s < maclcur->l_used - 1; s++) {
-			if (doscan(curmap, c = CHARMASK(maclcur->l_text[s]), &curmap)
+			if (doscan(curmap, c = (unsigned char)(maclcur->l_text[s]), &curmap)
 			    != NULL) {
 				if (remap(curmap, c, NULL, NULL)
 				    != TRUE)
@@ -726,7 +725,7 @@ excline(char *line)
 	if (*line != '\0') {
 		*line++ = '\0';
 		line = skipwhite(line);
-		if (ISDIGIT(*line) || *line == '-') {
+		if (isdigit(*line) || *line == '-') {
 			argp = line;
 			line = parsetoken(line);
 		}
@@ -815,9 +814,9 @@ excline(char *line)
 						 * split into two statements
 						 * due to bug in OSK cpp
 						 */
-						c = CHARMASK(*++argp);
-						c = ISLOWER(c) ?
-						    CCHR(TOUPPER(c)) : CCHR(c);
+						c = (unsigned char)(*++argp);
+						c = islower(c) ?
+						    CCHR(toupper(c)) : CCHR(c);
 						break;
 					case '0':
 					case '1':
@@ -843,14 +842,14 @@ excline(char *line)
 					case 'f':
 					case 'F':
 						c = *++argp - '0';
-						if (ISDIGIT(argp[1])) {
+						if (isdigit(argp[1])) {
 							c *= 10;
 							c += *++argp - '0';
 						}
 						c += 256;
 						break;
 					default:
-						c = CHARMASK(*argp);
+						c = (unsigned char)(*argp);
 						break;
 					}
 					argp++;
