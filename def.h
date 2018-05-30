@@ -322,9 +322,6 @@ struct undo_rec {
 
 #define putpad(str, num)	tputs(str, num, ttputc)
 
-#define KFIRST	K00
-#define KLAST	K00
-
 /*
  * Prototypes.
  */
@@ -750,7 +747,6 @@ extern int		 doaudiblebell;
 extern int		 dovisiblebell;
 extern int		 dblspace;
 extern char	 	 cinfo[];
-extern char		*keystrings[];
 extern char		 pat[NPAT];
 extern char		 prompt[];
 

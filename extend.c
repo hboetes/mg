@@ -847,7 +847,7 @@ excline(char *line)
 							c *= 10;
 							c += *++argp - '0';
 						}
-						c += KFIRST;
+						c += 256;
 						break;
 					default:
 						c = CHARMASK(*argp);

@@ -130,10 +130,10 @@ getkeyname(char *cp, size_t len, int k)
 		np = "DEL";
 		break;
 	default:
-		if (k >= KFIRST && k <= KLAST &&
-		    (np = keystrings[k - KFIRST]) != NULL)
+		if (k == 256) {
+			np = NULL;
 			break;
-		if (k > CCHR('?')) {
+		} else if (k > CCHR('?')) {
 			*cp++ = '0';
 			*cp++ = ((k >> 6) & 7) + '0';
 			*cp++ = ((k >> 3) & 7) + '0';

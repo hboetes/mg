@@ -18,12 +18,6 @@
 #include "kbd.h"
 
 /*
- * Get keyboard character.  Very simple if you use keymaps and keys files.
- */
-
-char	*keystrings[] = {NULL};
-
-/*
  * Turn on function keys using keypad_xmit, then load a keys file, if
  * available.  The keys file is located in the same manner as the startup
  * file is, depending on what startupfile() does on your system.
