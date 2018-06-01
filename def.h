@@ -519,6 +519,7 @@ char		*getkeyname(char  *, size_t, int);
 int		 byteinword(const char *, size_t, size_t);
 
 /* basic.c */
+void		 advance(const struct line *, size_t *, size_t *);
 int		 gotobol(int, int);
 int		 backchar(int, int);
 int		 gotoeol(int, int);

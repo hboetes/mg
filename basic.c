@@ -323,7 +323,7 @@ getgoal(struct line *dlp)
  * Perform the by-character stepping used in getbyteofcol() and
  * getcolofbyte().
  */
-static void
+void
 advance(const struct line *lp, size_t *i, size_t *col)
 {
 	size_t advance_by = 1;

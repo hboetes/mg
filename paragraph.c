@@ -422,21 +422,17 @@ int
 fillword(int f, int n)
 {
 	char	c;
-	int	col, i, nce;
+	size_t	col = 0;
+	size_t	i = 0;
+	int	nce;
 
-	for (i = col = 0; col <= fillcol; ++i, ++col) {
-		if (i == curwp->w_doto)
+	while(col <= fillcol) {
+		if (i == curwp->w_doto) {
 			return selfinsert(f, n);
-		c = lgetc(curwp->w_dotp, i);
-		if (c == '\t'
-#ifdef NOTAB
-		    && !(curbp->b_flag & BFNOTAB)
-#endif
-			)
-			col |= 0x07;
-		else if (iscntrl(c) != FALSE)
-			++col;
+		}
+		advance(curwp->w_dotp, &i, &col);
 	}
+
 	if (curwp->w_doto != llength(curwp->w_dotp)) {
 		(void)selfinsert(f, n);
 		nce = llength(curwp->w_dotp) - curwp->w_doto;

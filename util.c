@@ -77,6 +77,10 @@ showcpos(int f, int n)
 	}
 	ratio = nchar ? (100L * cchar) / nchar : 100;
 
+	if (!(clp->l_text)) {
+		return (TRUE);
+	}
+
 	if (!(curbp->b_flag & BFSHOWRAW)) {
 		mbstate_t mbs = { 0 };
 		size_t consumed = 0;
