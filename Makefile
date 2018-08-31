@@ -2,15 +2,15 @@
 
 PROG=	mg
 
-LDADD+=	-lcurses -lutil
-DPADD+=	${LIBCURSES} ${LIBUTIL}
+LDADD+=	`pkg-config --libs ncurses` -lutil
+DPADD+=	${LIBNCURSES} ${LIBUTIL}
 
 # (Common) compile-time options:
 #
 #	REGEX		-- create regular expression functions.
 #	STARTUPFILE	-- look for and handle initialization file.
 #
-CFLAGS+=-Wall -DREGEX
+CFLAGS+=-Wall -DREGEX `pkg-config --cflags-only-I ncurses`
 
 SRCS=	autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c \
 	echo.c extend.c file.c fileio.c funmap.c help.c kbd.c keymap.c \
@@ -22,6 +22,12 @@ SRCS=	autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c \
 # More or less standalone extensions.
 #
 SRCS+=	cmode.c cscope.c dired.c grep.c tags.c
+
+OS!=	uname
+
+.if ${OS:MDragonFly}
+SRCS+=	reallocarray.c
+.endif
 
 afterinstall:
 	${INSTALL} -d -o root -g wheel ${DESTDIR}${DOCDIR}/mg
