@@ -15,7 +15,7 @@
 
 #include	"chrdef.h"
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__DragonFly__)
 #  define LOGIN_NAME_MAX _POSIX_LOGIN_NAME_MAX
 #endif
 
@@ -327,6 +327,10 @@ struct undo_rec {
 /*
  * Prototypes.
  */
+
+#ifdef __DragonFly__
+void		*reallocarray(void*, size_t, size_t);
+#endif
 
 /* tty.c X */
 void		 ttinit(void);
