@@ -3,7 +3,7 @@
 PROG=	mg
 
 LDADD+=	`pkg-config --libs ncurses` -lutil
-DPADD+=	${LIBNCURSES} ${LIBUTIL}
+DPADD+=	${LIBUTIL}
 
 # (Common) compile-time options:
 #
