@@ -33,6 +33,23 @@ make
 sudo make install
 ```
 
+## USING CMAKE
+
+You can also build mg with cmake, it goes like this:
+
+ - Get the libbsd and libncurses dev packages installed.
+ - Run the following commands:
+
+```
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
+*Kudos to Leonid Bobrov(@mazocomp) for adding CMAKE support.*
+
 ## STATIC BUILDS
 
 I recently figured out how to make really portable static builds: On an
