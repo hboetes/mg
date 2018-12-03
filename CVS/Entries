@@ -31,7 +31,6 @@
 /macro.h/1.7/Tue Apr 10 04:57:08 2018//
 /match.c/1.19/Tue Apr 10 04:57:08 2018//
 /modes.c/1.21/Tue Apr 10 04:57:08 2018//
-/paragraph.c/1.45/Tue Apr 10 04:57:08 2018//
 /pathnames.h/1.1/Tue Apr 10 04:57:08 2018//
 /search.c/1.47/Sat Aug 11 17:34:08 2018//
 /spawn.c/1.12/Tue Apr 10 04:57:08 2018//
@@ -47,5 +46,6 @@
 /def.h/1.156/Result of merge//
 /funmap.c/1.54/Tue Sep 25 17:50:41 2018//
 /line.c/1.61/Tue Sep 25 17:50:41 2018//
-/mg.1/1.107/Tue Sep 25 17:50:41 2018//
+/mg.1/1.108/Mon Dec  3 22:54:38 2018//
+/paragraph.c/1.46/Mon Dec  3 22:54:38 2018//
 D
