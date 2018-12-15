@@ -1,6 +1,5 @@
 /ttyio.c/1.37/Wed Mar 25 18:47:22 2015//
 /region.c/1.37/Result of merge//
-/main.c/1.84/Result of merge//
 /tags.c/1.16/Result of merge//
 /re_search.c/1.33/Mon Aug 28 19:36:58 2017//
 /fileio.c/1.105/Result of merge+Thu Apr 19 17:50:42 2018//
@@ -9,7 +8,6 @@
 /autoexec.c/1.17/Tue Apr 10 04:57:08 2018//
 /basic.c/1.47/Tue Apr 10 04:57:08 2018//
 /bell.c/1.4/Tue Apr 10 04:57:08 2018//
-/buffer.c/1.104/Tue Apr 10 04:57:08 2018//
 /chrdef.h/1.10/Tue Apr 10 04:57:08 2018//
 /cinfo.c/1.18/Tue Apr 10 04:57:08 2018//
 /cmode.c/1.16/Tue Apr 10 04:57:08 2018//
@@ -43,9 +41,11 @@
 /window.c/1.36/Tue Apr 10 04:57:08 2018//
 /word.c/1.19/Tue Apr 10 04:57:08 2018//
 /yank.c/1.14/Tue Apr 10 04:57:08 2018//
-/def.h/1.156/Result of merge//
-/funmap.c/1.54/Tue Sep 25 17:50:41 2018//
 /line.c/1.61/Tue Sep 25 17:50:41 2018//
-/mg.1/1.108/Mon Dec  3 22:54:38 2018//
 /paragraph.c/1.46/Mon Dec  3 22:54:38 2018//
+/buffer.c/1.105/Sat Dec 15 16:42:05 2018//
+/def.h/1.157/Result of merge//
+/funmap.c/1.55/Sat Dec 15 16:42:05 2018//
+/main.c/1.85/Result of merge//
+/mg.1/1.109/Sat Dec 15 16:42:05 2018//
 D
