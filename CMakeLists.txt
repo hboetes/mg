@@ -9,11 +9,7 @@ set (MG_SRC autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c
 	cmode.c cscope.c dired.c grep.c tags.c
 )
 
-if(CMAKE_SYSTEM_NAME MATCHES "DragonFly")
-set (REALLOC_SRC reallocarray.c)
-endif()
-
-add_executable (mg ${MG_SRC} ${REALLOC_SRC})
+add_executable (mg ${MG_SRC})
 
 find_package (PkgConfig REQUIRED)
 pkg_check_modules (NCURSES REQUIRED ncurses)

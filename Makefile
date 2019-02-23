@@ -23,12 +23,6 @@ SRCS=	autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c \
 #
 SRCS+=	cmode.c cscope.c dired.c grep.c tags.c
 
-OS!=	uname
-
-.if ${OS:MDragonFly}
-SRCS+=	reallocarray.c
-.endif
-
 afterinstall:
 	${INSTALL} -d -o root -g wheel ${DESTDIR}${DOCDIR}/mg
 	${INSTALL} ${INSTALL_COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE} \
