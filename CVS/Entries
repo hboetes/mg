@@ -13,13 +13,11 @@
 /cmode.c/1.16/Tue Apr 10 04:57:08 2018//
 /cscope.c/1.17/Tue Apr 10 04:57:08 2018//
 /dir.c/1.30/Tue Apr 10 04:57:08 2018//
-/dired.c/1.83/Tue Apr 10 04:57:08 2018//
 /display.c/1.48/Tue Apr 10 04:57:08 2018//
 /echo.c/1.66/Tue Apr 10 04:57:08 2018//
 /extend.c/1.64/Tue Apr 10 04:57:08 2018//
 /file.c/1.100/Tue Apr 10 04:57:08 2018//
 /funmap.h/1.7/Tue Apr 10 04:57:08 2018//
-/grep.c/1.46/Tue Apr 10 04:57:08 2018//
 /help.c/1.35/Tue Apr 10 04:57:08 2018//
 /kbd.c/1.30/Tue Apr 10 04:57:08 2018//
 /kbd.h/1.19/Tue Apr 10 04:57:08 2018//
@@ -36,7 +34,6 @@
 /ttykbd.c/1.19/Tue Apr 10 04:57:08 2018//
 /tutorial/1.18/Mon May 28 16:13:00 2018//
 /undo.c/1.58/Tue Apr 10 04:57:08 2018//
-/util.c/1.38/Tue Apr 10 04:57:08 2018//
 /version.c/1.10/Tue Apr 10 04:57:08 2018//
 /window.c/1.36/Tue Apr 10 04:57:08 2018//
 /word.c/1.19/Tue Apr 10 04:57:08 2018//
@@ -47,5 +44,8 @@
 /def.h/1.157/Result of merge//
 /funmap.c/1.55/Sat Dec 15 16:42:05 2018//
 /main.c/1.85/Result of merge//
-/mg.1/1.109/Sat Dec 15 16:42:05 2018//
+/dired.c/1.84/Result of merge//
+/grep.c/1.47/Fri Apr  5 15:50:02 2019//
+/mg.1/1.112/Fri Apr  5 15:50:02 2019//
+/util.c/1.40/Fri Apr  5 15:50:02 2019//
 D

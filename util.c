@@ -1,4 +1,4 @@
-/*	$OpenBSD: util.c,v 1.38 2015/11/18 18:21:06 jasper Exp $	*/
+/*	$OpenBSD: util.c,v 1.40 2018/12/26 07:01:22 phessler Exp $	*/
 
 /* This file is in the public domain. */
 
