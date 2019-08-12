@@ -52,8 +52,8 @@ LIBS=		$(CURSES_LIBS) $(BSD_LIBS)
 
 
 OBJS=	autoexec.o basic.o bell.o buffer.o cinfo.o dir.o display.o \
-	echo.o extend.o file.o fileio.o funmap.o help.o kbd.o keymap.o \
-	line.o macro.o main.o match.o modes.o paragraph.o \
+	echo.o extend.o file.o fileio.o funmap.o interpreter.o help.o \
+	kbd.o keymap.o line.o macro.o main.o match.o modes.o paragraph.o \
 	re_search.o region.o search.o spawn.o tty.o ttyio.o ttykbd.o \
 	undo.o util.o version.o window.o word.o yank.o
 OBJS+=	cmode.o cscope.o dired.o grep.o tags.o

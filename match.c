@@ -1,4 +1,4 @@
-/*	$OpenBSD: match.c,v 1.19 2015/06/03 23:40:01 bcallah Exp $	*/
+/*	$OpenBSD: match.c,v 1.21 2019/07/02 16:25:39 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -37,7 +37,9 @@ static struct balance {
 
 /*
  * Hack to show matching paren.  Self-insert character, then show matching
- * character, if any.  Bound to "blink-and-insert".
+ * character, if any.  Bound to "blink-and-insert".  Used in the mg startup
+ * file to amend the default cursor behaviour of a key press, e.g:
+ *   global-set-key "%" blink-and-insert
  */
 int
 showmatch(int f, int n)

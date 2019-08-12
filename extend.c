@@ -1,13 +1,13 @@
-/*	$OpenBSD: extend.c,v 1.64 2016/09/01 21:06:09 lum Exp $	*/
-
+/*	$OpenBSD: extend.c,v 1.71 2019/07/18 15:52:11 lum Exp $	*/
 /* This file is in the public domain. */
 
 /*
- *	Extended (M-X) commands, rebinding, and	startup file processing.
+ *	Extended (M-x) commands, rebinding, and	startup file processing.
  */
 
 #include <sys/queue.h>
 #include <sys/types.h>
+#include <regex.h>
 #include <ctype.h>
 #include <limits.h>
 #include <signal.h>
@@ -26,7 +26,6 @@ static int	 remap(KEYMAP *, int, PF, KEYMAP *);
 static KEYMAP	*reallocmap(KEYMAP *);
 static void	 fixmap(KEYMAP *, KEYMAP *, KEYMAP *);
 static int	 dobind(KEYMAP *, const char *, int);
-static char	*skipwhite(char *);
 static char	*parsetoken(char *);
 static int	 bindkey(KEYMAP **, const char *, KCHAR *, int);
 
@@ -37,7 +36,7 @@ static int	 bindkey(KEYMAP **, const char *, KCHAR *, int);
 int
 insert(int f, int n)
 {
-	char	 buf[128], *bufp, *cp;
+	char	 buf[BUFSIZE], *bufp, *cp;
 	int	 count, c;
 
 	if (inmacro) {
@@ -110,11 +109,9 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 		if (n1 <= MAPELEDEF && n1 <= n2) {
 			ele--;
 			if ((pfp = calloc(c - ele->k_base + 1,
-			    sizeof(PF))) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
+			    sizeof(PF))) == NULL)
+				return (dobeep_msg("Out of memory"));
+
 			nold = ele->k_num - ele->k_base + 1;
 			for (i = 0; i < nold; i++)
 				pfp[i] = ele->k_funcp[i];
@@ -125,11 +122,9 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 			ele->k_funcp = pfp;
 		} else if (n2 <= MAPELEDEF) {
 			if ((pfp = calloc(ele->k_num - c + 1,
-			    sizeof(PF))) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
+			    sizeof(PF))) == NULL)
+				return (dobeep_msg("Out of memory"));
+
 			nold = ele->k_num - ele->k_base + 1;
 			for (i = 0; i < nold; i++)
 				pfp[i + n2] = ele->k_funcp[i];
@@ -144,11 +139,9 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 					return (FALSE);
 				curmap = newmap;
 			}
-			if ((pfp = malloc(sizeof(PF))) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
+			if ((pfp = malloc(sizeof(PF))) == NULL)
+				return (dobeep_msg("Out of memory"));
+
 			pfp[0] = funct;
 			for (mep = &curmap->map_element[curmap->map_num];
 			    mep > ele; mep--) {
@@ -169,8 +162,7 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 			else {
 				if ((mp = malloc(sizeof(KEYMAP) +
 				    (MAPINIT - 1) * sizeof(struct map_element))) == NULL) {
-					dobeep();
-					ewprintf("Out of memory");
+					(void)dobeep_msg("Out of memory");
 					ele->k_funcp[c - ele->k_base] =
 					    curmap->map_default;
 					return (FALSE);
@@ -199,8 +191,7 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 					if ((mp = malloc(sizeof(KEYMAP) +
 					    (MAPINIT - 1) *
 					    sizeof(struct map_element))) == NULL) {
-						dobeep();
-						ewprintf("Out of memory");
+						(void)dobeep_msg("Out of memory");
 						ele->k_funcp[c - ele->k_base] =
 						    curmap->map_default;
 						return (FALSE);
@@ -226,11 +217,9 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 				curmap = newmap;
 			}
 			if ((pfp = calloc(ele->k_num - c + !n2,
-			    sizeof(PF))) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
+			    sizeof(PF))) == NULL)
+				return (dobeep_msg("Out of memory"));
+
 			ele->k_funcp[n1] = NULL;
 			for (i = n1 + n2; i <= ele->k_num - ele->k_base; i++)
 				pfp[i - n1 - n2] = ele->k_funcp[i];
@@ -250,8 +239,7 @@ remap(KEYMAP *curmap, int c, PF funct, KEYMAP *pref_map)
 			if (pref_map == NULL) {
 				if ((mp = malloc(sizeof(KEYMAP) + (MAPINIT - 1)
 				    * sizeof(struct map_element))) == NULL) {
-					dobeep();
-					ewprintf("Out of memory");
+					(void)dobeep_msg("Out of memory");
 					ele->k_funcp[c - ele->k_base] =
 					    curmap->map_default;
 					return (FALSE);
@@ -279,14 +267,12 @@ reallocmap(KEYMAP *curmap)
 	int	 i;
 
 	if (curmap->map_max > SHRT_MAX - MAPGROW) {
-		dobeep();
-		ewprintf("keymap too large");
+		(void)dobeep_msg("keymap too large");
 		return (NULL);
 	}
 	if ((mp = malloc(sizeof(KEYMAP) + (curmap->map_max + (MAPGROW - 1)) *
 	    sizeof(struct map_element))) == NULL) {
-		dobeep();
-		ewprintf("Out of memory");
+		(void)dobeep_msg("Out of memory");
 		return (NULL);
 	}
 	mp->map_num = curmap->map_num;
@@ -343,9 +329,7 @@ dobind(KEYMAP *curmap, const char *p, int unbind)
 		 * Keystrokes aren't collected. Not hard, but pretty useless.
 		 * Would not work for function keys in any case.
 		 */
-		dobeep();
-		ewprintf("Can't rebind key in macro");
-		return (FALSE);
+		return (dobeep_msg("Can't rebind key in macro"));
 	}
 	if (inmacro) {
 		for (s = 0; s < maclcur->l_used - 1; s++) {
@@ -383,11 +367,9 @@ dobind(KEYMAP *curmap, const char *p, int unbind)
 		else if (bufp[0] == '\0')
 			return (FALSE);
 		if (((funct = name_function(bprompt)) == NULL) ?
-		    (pref_map = name_map(bprompt)) == NULL : funct == NULL) {
-			dobeep();
-			ewprintf("[No match]");
-			return (FALSE);
-		}
+		    (pref_map = name_map(bprompt)) == NULL : funct == NULL)
+			return (dobeep_msg("[No match]"));
+
 	}
 	return (remap(curmap, c, funct, pref_map));
 }
@@ -512,11 +494,9 @@ redefine_key(int f, int n)
 	else if (bufp[0] == '\0')
 		return (FALSE);
 	(void)strlcat(buf, tmp, sizeof(buf));
-	if ((mp = name_map(tmp)) == NULL) {
-		dobeep();
-		ewprintf("Unknown map %s", tmp);
-		return (FALSE);
-	}
+	if ((mp = name_map(tmp)) == NULL)
+		return (dobeep_msgs("Unknown map ", tmp));
+
 	if (strlcat(buf, "key: ", sizeof(buf)) >= sizeof(buf))
 		return (FALSE);
 
@@ -568,9 +548,7 @@ extend(int f, int n)
 		}
 		return ((*funct)(f, n));
 	}
-	dobeep();
-	ewprintf("[No match]");
-	return (FALSE);
+	return (dobeep_msg("[No match]"));
 }
 
 /*
@@ -595,7 +573,7 @@ extend(int f, int n)
 int
 evalexpr(int f, int n)
 {
-	char	 exbuf[128], *bufp;
+	char	 exbuf[BUFSIZE], *bufp;
 
 	if ((bufp = eread("Eval: ", exbuf, sizeof(exbuf),
 	    EFNEW | EFCR)) == NULL)
@@ -616,18 +594,21 @@ evalbuffer(int f, int n)
 	struct line		*lp;
 	struct buffer		*bp = curbp;
 	int		 s;
-	static char	 excbuf[128];
+	static char	 excbuf[BUFSIZE];
 
 	for (lp = bfirstlp(bp); lp != bp->b_headp; lp = lforw(lp)) {
-		if (llength(lp) >= 128)
+		if (llength(lp) >= BUFSIZE)
 			return (FALSE);
 		(void)strncpy(excbuf, ltext(lp), llength(lp));
 
 		/* make sure it's terminated */
 		excbuf[llength(lp)] = '\0';
-		if ((s = excline(excbuf)) != TRUE)
+		if ((s = excline(excbuf)) != TRUE) {
+			(void) clearvars();
 			return (s);
+		}
 	}
+	(void) clearvars();
 	return (TRUE);
 }
 
@@ -657,7 +638,7 @@ load(const char *fname)
 {
 	int	 s = TRUE, line, ret;
 	int	 nbytes = 0;
-	char	 excbuf[128];
+	char	 excbuf[BUFSIZE], fncpy[NFILEN];
 	FILE    *ffp;
 
 	if ((fname = adjustname(fname, TRUE)) == NULL)
@@ -671,6 +652,8 @@ load(const char *fname)
 		return (FALSE);
 	}
 
+	/* keep a note of fname incase of errors in loaded file. */
+	(void)strlcpy(fncpy, fname, sizeof(fncpy));
 	line = 0;
 	while ((s = ffgetline(ffp, excbuf, sizeof(excbuf) - 1, &nbytes))
 	    == FIOSUC) {
@@ -679,7 +662,7 @@ load(const char *fname)
 		if (excline(excbuf) != TRUE) {
 			s = FIOERR;
 			dobeep();
-			ewprintf("Error loading file %s at line %d", fname, line);
+			ewprintf("Error loading file %s at line %d", fncpy, line);
 			break;
 		}
 	}
@@ -712,16 +695,16 @@ excline(char *line)
 
 	lp = NULL;
 
-	if (macrodef || inmacro) {
-		dobeep();
-		ewprintf("Not now!");
-		return (FALSE);
-	}
+	if (macrodef || inmacro)
+		return (dobeep_msg("Not now!"));
+
 	f = 0;
 	n = 1;
 	funcp = skipwhite(line);
 	if (*funcp == '\0')
 		return (TRUE);	/* No error on blank lines */
+	if (*funcp == '(')
+		return (foundparen(funcp));
 	line = parsetoken(funcp);
 	if (*line != '\0') {
 		*line++ = '\0';
@@ -740,11 +723,9 @@ excline(char *line)
 			return (FALSE);
 		n = (int)nl;
 	}
-	if ((fp = name_function(funcp)) == NULL) {
-		dobeep();
-		ewprintf("Unknown function: %s", funcp);
-		return (FALSE);
-	}
+	if ((fp = name_function(funcp)) == NULL)
+		return (dobeep_msgs("Unknown function: ", funcp));
+
 	if (fp == bindtokey || fp == unbindtokey) {
 		bind = BINDARG;
 		curmap = fundamental_map;
@@ -870,8 +851,7 @@ excline(char *line)
 		case BINDNEXT:
 			lp->l_text[lp->l_used] = '\0';
 			if ((curmap = name_map(lp->l_text)) == NULL) {
-				dobeep();
-				ewprintf("No such mode: %s", lp->l_text);
+				(void)dobeep_msgs("No such mode: ", lp->l_text);
 				status = FALSE;
 				free(lp);
 				goto cleanup;
@@ -888,8 +868,7 @@ excline(char *line)
 	}
 	switch (bind) {
 	default:
-		dobeep();
-		ewprintf("Bad args to set key");
+		(void)dobeep_msg("Bad args to set key");
 		status = FALSE;
 		break;
 	case BINDDO:
@@ -923,10 +902,10 @@ cleanup:
 /*
  * a pair of utility functions for the above
  */
-static char *
+char *
 skipwhite(char *s)
 {
-	while (*s == ' ' || *s == '\t' || *s == ')' || *s == '(')
+	while (*s == ' ' || *s == '\t')
 		s++;
 	if ((*s == ';') || (*s == '#'))
 		*s = '\0';

@@ -1,53 +1,54 @@
-/ttyio.c/1.37/Wed Mar 25 18:47:22 2015//
 /tags.c/1.16/Result of merge//
 /re_search.c/1.33/Mon Aug 28 19:36:58 2017//
-/fileio.c/1.105/Result of merge+Thu Apr 19 17:50:42 2018//
-/README/1.14/Tue Apr 10 04:57:08 2018//
-/autoexec.c/1.17/Tue Apr 10 04:57:08 2018//
-/bell.c/1.4/Tue Apr 10 04:57:08 2018//
-/chrdef.h/1.10/Tue Apr 10 04:57:08 2018//
-/cinfo.c/1.18/Tue Apr 10 04:57:08 2018//
-/cmode.c/1.16/Tue Apr 10 04:57:08 2018//
-/cscope.c/1.17/Tue Apr 10 04:57:08 2018//
-/dir.c/1.30/Tue Apr 10 04:57:08 2018//
-/display.c/1.48/Tue Apr 10 04:57:08 2018//
-/echo.c/1.66/Tue Apr 10 04:57:08 2018//
-/extend.c/1.64/Tue Apr 10 04:57:08 2018//
-/file.c/1.100/Tue Apr 10 04:57:08 2018//
-/funmap.h/1.7/Tue Apr 10 04:57:08 2018//
-/help.c/1.35/Tue Apr 10 04:57:08 2018//
-/kbd.h/1.19/Tue Apr 10 04:57:08 2018//
-/key.h/1.5/Tue Apr 10 04:57:08 2018//
-/keymap.c/1.58/Tue Apr 10 04:57:08 2018//
-/macro.c/1.16/Tue Apr 10 04:57:08 2018//
-/macro.h/1.7/Tue Apr 10 04:57:08 2018//
-/match.c/1.19/Tue Apr 10 04:57:08 2018//
-/modes.c/1.21/Tue Apr 10 04:57:08 2018//
-/pathnames.h/1.1/Tue Apr 10 04:57:08 2018//
-/search.c/1.47/Sat Aug 11 17:34:08 2018//
-/spawn.c/1.12/Tue Apr 10 04:57:08 2018//
-/tty.c/1.36/Tue Apr 10 04:57:08 2018//
-/ttykbd.c/1.19/Tue Apr 10 04:57:08 2018//
-/tutorial/1.18/Mon May 28 16:13:00 2018//
 /undo.c/1.58/Tue Apr 10 04:57:08 2018//
-/version.c/1.10/Tue Apr 10 04:57:08 2018//
-/window.c/1.36/Tue Apr 10 04:57:08 2018//
-/word.c/1.19/Tue Apr 10 04:57:08 2018//
-/yank.c/1.14/Tue Apr 10 04:57:08 2018//
-/line.c/1.61/Tue Sep 25 17:50:41 2018//
-/paragraph.c/1.46/Mon Dec  3 22:54:38 2018//
-/buffer.c/1.105/Sat Dec 15 16:42:05 2018//
-/def.h/1.157/Result of merge//
-/funmap.c/1.55/Sat Dec 15 16:42:05 2018//
-/dired.c/1.84/Result of merge//
-/grep.c/1.47/Fri Apr  5 15:50:02 2019//
-/Makefile/1.34/Result of merge//
-/basic.c/1.49/Thu Jun 20 04:48:21 2019//
-/kbd.c/1.31/Thu Jun 20 04:48:21 2019//
-/log.c/1.6/Fri Jun 14 14:27:42 2019//
-/log.h/1.2/Mon Jun 10 16:48:59 2019//
-/main.c/1.86/Result of merge//
-/mg.1/1.115/Thu Jun 20 04:48:21 2019//
 /region.c/1.38/Result of merge//
-/util.c/1.41/Thu Jun 20 04:48:21 2019//
+/Makefile/1.35/Result of merge//
+/README/1.14/Mon Aug 12 23:34:18 2019//
+/autoexec.c/1.17/Mon Aug 12 23:34:18 2019//
+/basic.c/1.49/Mon Aug 12 23:34:18 2019//
+/bell.c/1.5/Mon Aug 12 23:34:28 2019//
+/buffer.c/1.107/Mon Aug 12 23:34:28 2019//
+/chrdef.h/1.10/Mon Aug 12 23:34:18 2019//
+/cinfo.c/1.18/Mon Aug 12 23:34:18 2019//
+/cmode.c/1.17/Mon Aug 12 23:34:28 2019//
+/cscope.c/1.18/Mon Aug 12 23:34:28 2019//
+/def.h/1.165/Result of merge//
+/dir.c/1.31/Mon Aug 12 23:34:28 2019//
+/dired.c/1.93/Result of merge//
+/display.c/1.48/Mon Aug 12 23:34:18 2019//
+/echo.c/1.66/Mon Aug 12 23:34:18 2019//
+/extend.c/1.71/Mon Aug 12 23:34:28 2019//
+/file.c/1.102/Mon Aug 12 23:34:28 2019//
+/fileio.c/1.106/Result of merge//
+/funmap.c/1.59/Mon Aug 12 23:34:28 2019//
+/funmap.h/1.8/Mon Aug 12 23:34:28 2019//
+/grep.c/1.48/Mon Aug 12 23:34:28 2019//
+/help.c/1.35/Mon Aug 12 23:34:18 2019//
+/interpreter.c/1.5/Sat Jul 20 11:06:33 2019//
+/kbd.c/1.33/Mon Aug 12 23:34:28 2019//
+/kbd.h/1.19/Mon Aug 12 23:34:18 2019//
+/key.h/1.6/Mon Aug 12 23:34:28 2019//
+/keymap.c/1.58/Mon Aug 12 23:34:18 2019//
+/line.c/1.61/Mon Aug 12 23:34:18 2019//
+/log.c/1.11/Mon Aug 12 23:34:29 2019//
+/log.h/1.5/Mon Aug 12 23:34:29 2019//
+/macro.c/1.16/Mon Aug 12 23:34:18 2019//
+/macro.h/1.7/Mon Aug 12 23:34:18 2019//
+/main.c/1.87/Result of merge//
+/match.c/1.21/Mon Aug 12 23:34:29 2019//
+/mg.1/1.117/Mon Aug 12 23:34:29 2019//
+/modes.c/1.21/Mon Aug 12 23:34:18 2019//
+/paragraph.c/1.46/Mon Aug 12 23:34:18 2019//
+/pathnames.h/1.1/Mon Aug 12 23:34:18 2019//
+/search.c/1.47/Mon Aug 12 23:34:18 2019//
+/spawn.c/1.12/Mon Aug 12 23:34:18 2019//
+/tty.c/1.36/Mon Aug 12 23:34:18 2019//
+/ttyio.c/1.38/Result of merge//
+/ttykbd.c/1.19/Mon Aug 12 23:34:18 2019//
+/tutorial/1.18/Mon Aug 12 23:34:18 2019//
+/util.c/1.42/Mon Aug 12 23:34:29 2019//
+/version.c/1.10/Mon Aug 12 23:34:18 2019//
+/window.c/1.36/Mon Aug 12 23:34:18 2019//
+/word.c/1.19/Mon Aug 12 23:34:18 2019//
+/yank.c/1.14/Mon Aug 12 23:34:18 2019//
 D

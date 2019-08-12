@@ -1,4 +1,4 @@
-/*	$OpenBSD: dired.c,v 1.84 2018/12/30 23:09:58 guenther Exp $	*/
+/*	$OpenBSD: dired.c,v 1.93 2019/07/11 18:20:18 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -51,6 +51,7 @@ static int	 d_backline(int, int);
 static int	 d_killbuffer_cmd(int, int);
 static int	 d_refreshbuffer(int, int);
 static int	 d_filevisitalt(int, int);
+static int	 d_gotofile(int, int);
 static void	 reaper(int);
 static struct buffer	*refreshbuffer(struct buffer *);
 static int	 createlist(struct buffer *);
@@ -127,7 +128,10 @@ static PF direda[] = {
 	d_del,			/* d */
 	d_findfile,		/* e */
 	d_findfile,		/* f */
-	d_refreshbuffer		/* g */
+	d_refreshbuffer,	/* g */
+	rescan,			/* h */
+	rescan,			/* i */
+	d_gotofile		/* j */
 };
 
 static PF diredn[] = {
@@ -186,7 +190,7 @@ static struct KEYMAPE (7) diredmap = {
 			CCHR('Z'), '+', diredcz, (KEYMAP *) & metamap
 		},
 		{
-			'a', 'g', direda, NULL
+			'a', 'j', direda, NULL
 		},
 		{
 			'n', 'x', diredn, NULL
@@ -200,22 +204,24 @@ static struct KEYMAPE (7) diredmap = {
 void
 dired_init(void)
 {
-	funmap_add(dired, "dired");
-	funmap_add(d_undelbak, "dired-unmark-backward");
-	funmap_add(d_create_directory, "dired-create-directory");
-	funmap_add(d_copy, "dired-do-copy");
-	funmap_add(d_expunge, "dired-do-flagged-delete");
-	funmap_add(d_findfile, "dired-find-file");
-	funmap_add(d_ffotherwindow, "dired-find-file-other-window");
-	funmap_add(d_del, "dired-flag-file-deletion");
-	funmap_add(d_forwline, "dired-next-line");
-	funmap_add(d_otherwindow, "dired-other-window");
-	funmap_add(d_backline, "dired-previous-line");
-	funmap_add(d_rename, "dired-do-rename");
-	funmap_add(d_backpage, "dired-scroll-down");
-	funmap_add(d_forwpage, "dired-scroll-up");
-	funmap_add(d_undel, "dired-unmark");
-	funmap_add(d_killbuffer_cmd, "quit-window");
+	funmap_add(dired, "dired", 1);
+	funmap_add(d_create_directory, "dired-create-directory", 1);
+	funmap_add(d_copy, "dired-do-copy", 1);
+	funmap_add(d_expunge, "dired-do-flagged-delete", 0);
+	funmap_add(d_rename, "dired-do-rename", 1);
+	funmap_add(d_findfile, "dired-find-file", 1);
+	funmap_add(d_ffotherwindow, "dired-find-file-other-window", 1);
+	funmap_add(d_del, "dired-flag-file-deletion", 0);
+	funmap_add(d_gotofile, "dired-goto-file", 1);
+	funmap_add(d_forwline, "dired-next-line", 0);
+	funmap_add(d_otherwindow, "dired-other-window", 0);
+	funmap_add(d_backline, "dired-previous-line", 0);
+	funmap_add(d_refreshbuffer, "dired-revert", 0);
+	funmap_add(d_backpage, "dired-scroll-down", 0);
+	funmap_add(d_forwpage, "dired-scroll-up", 0);
+	funmap_add(d_undel, "dired-unmark", 0);
+	funmap_add(d_undelbak, "dired-unmark-backward", 0);
+	funmap_add(d_killbuffer_cmd, "quit-window", 0);
 	maps_add((KEYMAP *)&diredmap, "dired");
 	dobindkey(fundamental_map, "dired", "^Xd");
 }
@@ -405,7 +411,7 @@ d_expunge(int f, int n)
 				curwp->w_dotline = tmp;
 				return (FALSE);
 			case FALSE:
-				if (unlink(fname) < 0) {
+				if (unlink(fname) == -1) {
 					(void)xbasename(sname, fname, NFILEN);
 					dobeep();
 					ewprintf("Could not delete '%s'", sname);
@@ -414,7 +420,7 @@ d_expunge(int f, int n)
 				}
 				break;
 			case TRUE:
-				if (rmdir(fname) < 0) {
+				if (rmdir(fname) == -1) {
 					(void)xbasename(sname, fname, NFILEN);
 					dobeep();
 					ewprintf("Could not delete directory "
@@ -444,6 +450,7 @@ d_expunge(int f, int n)
 int
 d_copy(int f, int n)
 {
+	struct stat      statbuf;
 	char		 frname[NFILEN], toname[NFILEN], sname[NFILEN];
 	char		*topath, *bufp;
 	int		 ret;
@@ -470,11 +477,29 @@ d_copy(int f, int n)
 		return (FALSE);
 
 	topath = adjustname(toname, TRUE);
+	if (stat(topath, &statbuf) == 0) {
+		if (S_ISDIR(statbuf.st_mode)) {
+			off = snprintf(toname, sizeof(toname), "%s/%s",
+			    topath, sname);
+			if (off < 0 || off >= sizeof(toname) - 1) {
+				dobeep();
+				ewprintf("Directory name too long");
+				return (FALSE);
+			}
+			topath = adjustname(toname, TRUE);
+		}
+	}
+	if (strcmp(frname, topath) == 0) {
+		ewprintf("Cannot copy to same file: %s", frname);
+		return (TRUE);
+	}
 	ret = (copy(frname, topath) >= 0) ? TRUE : FALSE;
 	if (ret != TRUE)
 		return (ret);
 	if ((bp = refreshbuffer(curbp)) == NULL)
 		return (FALSE);
+
+	ewprintf("Copy: 1 file");
 	return (showbuffer(bp, curwp, WFFULL | WFMODE));
 }
 
@@ -482,6 +507,7 @@ d_copy(int f, int n)
 int
 d_rename(int f, int n)
 {
+	struct stat      statbuf;
 	char		 frname[NFILEN], toname[NFILEN];
 	char		*topath, *bufp;
 	int		 ret;
@@ -509,11 +535,29 @@ d_rename(int f, int n)
 		return (FALSE);
 
 	topath = adjustname(toname, TRUE);
+	if (stat(topath, &statbuf) == 0) {
+		if (S_ISDIR(statbuf.st_mode)) {
+			off = snprintf(toname, sizeof(toname), "%s/%s",
+			    topath, sname);
+			if (off < 0 || off >= sizeof(toname) - 1) {
+				dobeep();
+				ewprintf("Directory name too long");
+				return (FALSE);
+			}
+			topath = adjustname(toname, TRUE);
+		}
+	}
+	if (strcmp(frname, topath) == 0) {
+		ewprintf("Cannot move to same file: %s", frname);
+		return (TRUE);
+	}
 	ret = (rename(frname, topath) >= 0) ? TRUE : FALSE;
 	if (ret != TRUE)
 		return (ret);
 	if ((bp = refreshbuffer(curbp)) == NULL)
 		return (FALSE);
+
+	ewprintf("Move: 1 file");
 	return (showbuffer(bp, curwp, WFFULL | WFMODE));
 }
 
@@ -1036,6 +1080,58 @@ createlist(struct buffer *bp)
 		nlp = lforw(lp);
 	}
 	return (ret);
+}
+
+int
+d_gotofile(int f, int n)
+{
+	struct line	*lp, *nlp;
+	struct buffer   *curbp;
+	size_t		 lenfpath;
+	char		 fpath[NFILEN], fname[NFILEN];
+	char		*p, *fpth, *fnp = NULL;
+	int		 tmp;
+
+	if (getbufcwd(fpath, sizeof(fpath)) != TRUE)
+		fpath[0] = '\0';
+	lenfpath = strlen(fpath);
+	fnp = eread("Goto file: ", fpath, NFILEN,
+	    EFNEW | EFCR | EFFILE | EFDEF);
+	if (fnp == NULL)
+		return (ABORT);
+	else if (fnp[0] == '\0')
+		return (FALSE);
+
+	fpth = adjustname(fpath, TRUE);		/* Removes last '/' if	*/
+	if (strlen(fpth) == lenfpath - 1) {	/* directory, hence -1.	*/
+		ewprintf("No file to find");	/* Current directory given so  */
+		return (TRUE);			/* return at present location. */
+	}
+	(void)xbasename(fname, fpth, NFILEN);
+	curbp = curwp->w_bufp;
+	tmp = 0;
+	for (lp = bfirstlp(curbp); lp != curbp->b_headp; lp = nlp) {
+		tmp++;
+		if ((p = findfname(lp, p)) == NULL) {
+			nlp = lforw(lp);
+			continue;
+		}
+		if (strcmp(fname, p) == 0) {
+			curwp->w_dotp = lp;
+			curwp->w_dotline = tmp;
+			(void)d_warpdot(curwp->w_dotp, &curwp->w_doto);
+			tmp--;
+			break;
+		}
+		nlp = lforw(lp);
+	}
+	if (tmp == curbp->b_lines - 1) {
+		ewprintf("File not found %s", fname);
+		return (FALSE);
+	} else {
+		ewprintf("");
+		return (TRUE);
+	}
 }
 
 /*
