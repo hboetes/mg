@@ -18,7 +18,7 @@ was a piece of pie to get mg ported again.
 ## PORTING TO ALL OTHER PLATFORMS
 
 Okay, that was debian. Now I have to get the rest of all the previously
-suported platforms working again. All help is welcome and as always:
+supported platforms working again. All help is welcome and as always:
 Please provide patches that do not break stuff for other platforms.
 
 ## BUILDING MG
