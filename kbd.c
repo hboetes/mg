@@ -34,6 +34,8 @@ struct map_element	*ele;
 
 struct key key;
 
+int		 rptcount;
+
 /*
  * Toggle the value of use_metakey
  */

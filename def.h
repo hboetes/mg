@@ -348,7 +348,7 @@ void		 ttnowindow(void);
 void		 ttcolor(int);
 void		 ttresize(void);
 
-volatile sig_atomic_t winch_flag;
+extern volatile sig_atomic_t winch_flag;
 
 /* ttyio.c */
 void		 ttopen(void);
@@ -767,10 +767,10 @@ extern char		 prompt[];
 /*
  * Globals.
  */
-int		 tceeol;
-int		 tcinsl;
-int		 tcdell;
-int		 rptcount;	/* successive invocation count */
+extern int		 tceeol;
+extern int		 tcinsl;
+extern int		 tcdell;
+extern int		 rptcount;	/* successive invocation count */
 
 /* https://github.com/hboetes/mg/issues/7#issuecomment-475869095 */
 #if defined(__APPLE__) || defined(__NetBSD__)
