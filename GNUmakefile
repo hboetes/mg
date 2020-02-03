@@ -45,8 +45,6 @@ endif
 CC?=		gcc
 CFLAGS?=	-O2 -pipe
 CFLAGS+=	-g -Wall
-# This is a workaround for https://github.com/hboetes/mg/issues/12
-CFLAGS+=	-fcommon
 CPPFLAGS=	-DREGEX
 CPPFLAGS+=	-D_GNU_SOURCE
 CPPFLAGS+=	$(BSD_CPPFLAGS)
