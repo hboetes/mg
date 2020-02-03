@@ -45,6 +45,12 @@ static const char	*scroll_fwd;	/* How to scroll forward. */
 
 static void	 winchhandler(int);
 
+volatile sig_atomic_t winch_flag;
+
+int		 tceeol;
+int		 tcinsl;
+int		 tcdell;
+
 /* ARGSUSED */
 static void
 winchhandler(int sig)
