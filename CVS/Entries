@@ -12,7 +12,6 @@
 /cinfo.c/1.18/Mon Aug 12 23:34:18 2019//
 /cmode.c/1.17/Mon Aug 12 23:34:28 2019//
 /cscope.c/1.18/Mon Aug 12 23:34:28 2019//
-/def.h/1.165/Result of merge//
 /dir.c/1.31/Mon Aug 12 23:34:28 2019//
 /dired.c/1.93/Result of merge//
 /display.c/1.48/Mon Aug 12 23:34:18 2019//
@@ -25,7 +24,6 @@
 /grep.c/1.48/Mon Aug 12 23:34:28 2019//
 /help.c/1.35/Mon Aug 12 23:34:18 2019//
 /interpreter.c/1.5/Sat Jul 20 11:06:33 2019//
-/kbd.c/1.33/Mon Aug 12 23:34:28 2019//
 /kbd.h/1.19/Mon Aug 12 23:34:18 2019//
 /key.h/1.6/Mon Aug 12 23:34:28 2019//
 /keymap.c/1.58/Mon Aug 12 23:34:18 2019//
@@ -41,7 +39,6 @@
 /pathnames.h/1.1/Mon Aug 12 23:34:18 2019//
 /search.c/1.47/Mon Aug 12 23:34:18 2019//
 /spawn.c/1.12/Mon Aug 12 23:34:18 2019//
-/tty.c/1.36/Mon Aug 12 23:34:18 2019//
 /ttyio.c/1.38/Result of merge//
 /ttykbd.c/1.19/Mon Aug 12 23:34:18 2019//
 /tutorial/1.18/Mon Aug 12 23:34:18 2019//
@@ -51,4 +48,7 @@
 /word.c/1.19/Mon Aug 12 23:34:18 2019//
 /yank.c/1.14/Mon Aug 12 23:34:18 2019//
 /mg.1/1.118/Mon Feb  3 03:25:17 2020//
+/def.h/1.166/Result of merge+Sat Feb 15 14:26:34 2020//
+/kbd.c/1.34/Result of merge//
+/tty.c/1.37/Result of merge+Sat Feb 15 14:26:47 2020//
 D

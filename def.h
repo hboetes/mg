@@ -1,4 +1,4 @@
-/*	$OpenBSD: def.h,v 1.165 2019/07/18 10:55:11 lum Exp $	*/
+/*	$OpenBSD: def.h,v 1.166 2020/02/09 10:13:13 florian Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -763,10 +763,6 @@ extern char	 	 cinfo[];
 extern char		*keystrings[];
 extern char		 pat[NPAT];
 extern char		 prompt[];
-
-/*
- * Globals.
- */
 extern int		 tceeol;
 extern int		 tcinsl;
 extern int		 tcdell;
