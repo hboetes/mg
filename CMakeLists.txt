@@ -6,7 +6,7 @@ set (MG_SRC autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c
 	line.c macro.c main.c match.c modes.c paragraph.c
 	re_search.c region.c search.c spawn.c tty.c ttyio.c ttykbd.c
 	undo.c util.c version.c window.c word.c yank.c
-	cmode.c cscope.c dired.c grep.c tags.c
+	cmode.c cscope.c dired.c grep.c tags.c interpreter.c
 )
 
 add_executable (mg ${MG_SRC})
