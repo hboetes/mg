@@ -6,7 +6,7 @@ set (MG_SRC autoexec.c basic.c bell.c buffer.c cinfo.c dir.c display.c
 	line.c macro.c main.c match.c modes.c paragraph.c
 	re_search.c region.c search.c spawn.c tty.c ttyio.c ttykbd.c
 	undo.c util.c version.c window.c word.c yank.c
-	cmode.c cscope.c dired.c grep.c tags.c
+	cmode.c cscope.c dired.c grep.c tags.c interpreter.c
 )
 
 add_executable (mg ${MG_SRC})
@@ -22,6 +22,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   link_directories (${BSD_LIBRARY_DIRS})
   string (REPLACE ";" " " LIBBSD_FLAGS "${BSD_CFLAGS}")
   target_link_libraries (mg ${BSD_LIBRARIES})
+  set (CMAKE_C_FLAGS "-Wall -DREGEX -D_GNU_SOURCE ${LIBBSD_FLAGS} ${NCURSES_FLAGS} -L${NCURSES_LIBRARY_DIRS}")
+else()
+  set (CMAKE_C_FLAGS "-Wall -DREGEX ${LIBBSD_FLAGS} ${NCURSES_FLAGS} -L${NCURSES_LIBRARY_DIRS}")
 endif()
-
-set (CMAKE_C_FLAGS "-Wall -DREGEX ${LIBBSD_FLAGS} ${NCURSES_FLAGS} -L${NCURSES_LIBRARY_DIRS}")
