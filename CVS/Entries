@@ -1,54 +1,54 @@
 /tags.c/1.16/Result of merge//
-/re_search.c/1.33/Mon Aug 28 19:36:58 2017//
 /undo.c/1.58/Tue Apr 10 04:57:08 2018//
 /region.c/1.38/Result of merge//
 /Makefile/1.35/Result of merge//
-/README/1.14/Mon Aug 12 23:34:18 2019//
-/autoexec.c/1.17/Mon Aug 12 23:34:18 2019//
-/basic.c/1.49/Mon Aug 12 23:34:18 2019//
-/bell.c/1.5/Mon Aug 12 23:34:28 2019//
-/buffer.c/1.107/Mon Aug 12 23:34:28 2019//
-/chrdef.h/1.10/Mon Aug 12 23:34:18 2019//
-/cinfo.c/1.18/Mon Aug 12 23:34:18 2019//
-/cmode.c/1.17/Mon Aug 12 23:34:28 2019//
-/cscope.c/1.18/Mon Aug 12 23:34:28 2019//
-/dir.c/1.31/Mon Aug 12 23:34:28 2019//
 /dired.c/1.93/Result of merge//
-/display.c/1.48/Mon Aug 12 23:34:18 2019//
-/echo.c/1.66/Mon Aug 12 23:34:18 2019//
-/extend.c/1.71/Mon Aug 12 23:34:28 2019//
-/file.c/1.102/Mon Aug 12 23:34:28 2019//
 /fileio.c/1.106/Result of merge//
-/funmap.c/1.59/Mon Aug 12 23:34:28 2019//
-/funmap.h/1.8/Mon Aug 12 23:34:28 2019//
-/grep.c/1.48/Mon Aug 12 23:34:28 2019//
-/help.c/1.35/Mon Aug 12 23:34:18 2019//
-/interpreter.c/1.5/Sat Jul 20 11:06:33 2019//
-/kbd.h/1.19/Mon Aug 12 23:34:18 2019//
-/key.h/1.6/Mon Aug 12 23:34:28 2019//
-/keymap.c/1.58/Mon Aug 12 23:34:18 2019//
-/line.c/1.61/Mon Aug 12 23:34:18 2019//
-/log.c/1.11/Mon Aug 12 23:34:29 2019//
-/log.h/1.5/Mon Aug 12 23:34:29 2019//
-/macro.c/1.16/Mon Aug 12 23:34:18 2019//
-/macro.h/1.7/Mon Aug 12 23:34:18 2019//
 /main.c/1.87/Result of merge//
-/match.c/1.21/Mon Aug 12 23:34:29 2019//
-/modes.c/1.21/Mon Aug 12 23:34:18 2019//
-/paragraph.c/1.46/Mon Aug 12 23:34:18 2019//
-/pathnames.h/1.1/Mon Aug 12 23:34:18 2019//
-/search.c/1.47/Mon Aug 12 23:34:18 2019//
-/spawn.c/1.12/Mon Aug 12 23:34:18 2019//
 /ttyio.c/1.38/Result of merge//
-/ttykbd.c/1.19/Mon Aug 12 23:34:18 2019//
-/tutorial/1.18/Mon Aug 12 23:34:18 2019//
-/util.c/1.42/Mon Aug 12 23:34:29 2019//
-/version.c/1.10/Mon Aug 12 23:34:18 2019//
-/window.c/1.36/Mon Aug 12 23:34:18 2019//
-/word.c/1.19/Mon Aug 12 23:34:18 2019//
-/yank.c/1.14/Mon Aug 12 23:34:18 2019//
-/mg.1/1.118/Mon Feb  3 03:25:17 2020//
 /def.h/1.166/Result of merge+Sat Feb 15 14:26:34 2020//
-/kbd.c/1.34/Result of merge//
-/tty.c/1.37/Result of merge+Sat Feb 15 14:26:47 2020//
+/README/1.14/Thu Mar 12 08:13:18 2020//
+/autoexec.c/1.17/Thu Mar 12 08:13:18 2020//
+/basic.c/1.49/Thu Mar 12 08:13:18 2020//
+/bell.c/1.5/Thu Mar 12 08:13:18 2020//
+/buffer.c/1.107/Thu Mar 12 08:13:18 2020//
+/chrdef.h/1.10/Thu Mar 12 08:13:18 2020//
+/cinfo.c/1.18/Thu Mar 12 08:13:18 2020//
+/cmode.c/1.17/Thu Mar 12 08:13:18 2020//
+/cscope.c/1.18/Thu Mar 12 08:13:18 2020//
+/dir.c/1.31/Thu Mar 12 08:13:18 2020//
+/display.c/1.48/Thu Mar 12 08:13:18 2020//
+/echo.c/1.66/Thu Mar 12 08:13:18 2020//
+/extend.c/1.71/Thu Mar 12 08:13:18 2020//
+/file.c/1.102/Thu Mar 12 08:13:18 2020//
+/funmap.c/1.59/Thu Mar 12 08:13:18 2020//
+/funmap.h/1.8/Thu Mar 12 08:13:18 2020//
+/grep.c/1.48/Thu Mar 12 08:13:18 2020//
+/help.c/1.35/Thu Mar 12 08:13:18 2020//
+/interpreter.c/1.5/Thu Mar 12 08:13:18 2020//
+/kbd.c/1.34/Thu Mar 12 08:13:18 2020//
+/kbd.h/1.19/Thu Mar 12 08:13:18 2020//
+/key.h/1.6/Thu Mar 12 08:13:18 2020//
+/keymap.c/1.58/Thu Mar 12 08:13:18 2020//
+/log.c/1.11/Thu Mar 12 08:13:18 2020//
+/log.h/1.5/Thu Mar 12 08:13:18 2020//
+/macro.c/1.16/Thu Mar 12 08:13:18 2020//
+/macro.h/1.7/Thu Mar 12 08:13:18 2020//
+/match.c/1.21/Thu Mar 12 08:13:18 2020//
+/mg.1/1.118/Thu Mar 12 08:13:18 2020//
+/modes.c/1.21/Thu Mar 12 08:13:18 2020//
+/paragraph.c/1.46/Thu Mar 12 08:13:18 2020//
+/pathnames.h/1.1/Thu Mar 12 08:13:18 2020//
+/search.c/1.47/Thu Mar 12 08:13:18 2020//
+/spawn.c/1.12/Thu Mar 12 08:13:18 2020//
+/tty.c/1.37/Thu Mar 12 08:13:18 2020//
+/ttykbd.c/1.19/Thu Mar 12 08:13:18 2020//
+/tutorial/1.18/Thu Mar 12 08:13:18 2020//
+/util.c/1.42/Thu Mar 12 08:13:18 2020//
+/version.c/1.10/Thu Mar 12 08:13:18 2020//
+/window.c/1.36/Thu Mar 12 08:13:18 2020//
+/word.c/1.19/Thu Mar 12 08:13:18 2020//
+/yank.c/1.14/Thu Mar 12 08:13:18 2020//
+/line.c/1.62/Thu Jul 23 17:18:45 2020//
+/re_search.c/1.35/Result of merge//
 D

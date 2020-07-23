@@ -1,4 +1,4 @@
-/*	$OpenBSD: re_search.c,v 1.33 2017/08/06 04:39:45 bcallah Exp $	*/
+/*	$OpenBSD: re_search.c,v 1.35 2020/07/22 13:29:05 tb Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -312,7 +312,7 @@ re_doreplace(RSIZE plen, char *st)
 static int
 re_forwsrch(void)
 {
-	int	 tbo, tdotline, error;
+	int	 	 re_flags, tbo, tdotline, error;
 	struct line	*clp;
 
 	clp = curwp->w_dotp;
@@ -322,9 +322,10 @@ re_forwsrch(void)
 	if (tbo == clp->l_used)
 		/*
 		 * Don't start matching past end of line -- must move to
-		 * beginning of next line, unless at end of file.
+		 * beginning of next line, unless line is empty or at
+		 * end of file.
 		 */
-		if (clp != curbp->b_headp) {
+		if (clp != curbp->b_headp && llength(clp) != 0) {
 			clp = lforw(clp);
 			tdotline++;
 			tbo = 0;
@@ -334,10 +335,13 @@ re_forwsrch(void)
 	 * always makes the last line empty so this is good.
 	 */
 	while (clp != (curbp->b_headp)) {
+		re_flags = REG_STARTEND;
+		if (tbo != 0)
+			re_flags |= REG_NOTBOL;
 		regex_match[0].rm_so = tbo;
 		regex_match[0].rm_eo = llength(clp);
-		error = regexec(&regex_buff, ltext(clp), RE_NMATCH, regex_match,
-		    REG_STARTEND);
+		error = regexec(&regex_buff, ltext(clp) ? ltext(clp) : "",
+		    RE_NMATCH, regex_match, re_flags);
 		if (error != 0) {
 			clp = lforw(clp);
 			tdotline++;
@@ -393,8 +397,9 @@ re_backsrch(void)
 		 * do this character-by-character after the first match since
 		 * POSIX regexps don't give you a way to do reverse matches.
 		 */
-		while (!regexec(&regex_buff, ltext(clp), RE_NMATCH, regex_match,
-		    REG_STARTEND) && regex_match[0].rm_so < tbo) {
+		while (!regexec(&regex_buff, ltext(clp) ? ltext(clp) : "",
+		    RE_NMATCH, regex_match, REG_STARTEND) &&
+		    regex_match[0].rm_so <= tbo) {
 			memcpy(&lastmatch, &regex_match[0], sizeof(regmatch_t));
 			regex_match[0].rm_so++;
 			regex_match[0].rm_eo = llength(clp);
@@ -542,8 +547,8 @@ killmatches(int cond)
 		/* see if line matches */
 		regex_match[0].rm_so = 0;
 		regex_match[0].rm_eo = llength(clp);
-		error = regexec(&regex_buff, ltext(clp), RE_NMATCH, regex_match,
-		    REG_STARTEND);
+		error = regexec(&regex_buff, ltext(clp) ? ltext(clp) : "",
+		    RE_NMATCH, regex_match, REG_STARTEND);
 
 		/* Delete line when appropriate */
 		if ((cond == FALSE && error) || (cond == TRUE && !error)) {
@@ -617,8 +622,8 @@ countmatches(int cond)
 		/* see if line matches */
 		regex_match[0].rm_so = 0;
 		regex_match[0].rm_eo = llength(clp);
-		error = regexec(&regex_buff, ltext(clp), RE_NMATCH, regex_match,
-		    REG_STARTEND);
+		error = regexec(&regex_buff, ltext(clp) ? ltext(clp) : "",
+		    RE_NMATCH, regex_match, REG_STARTEND);
 
 		/* Count line when appropriate */
 		if ((cond == FALSE && error) || (cond == TRUE && !error))
