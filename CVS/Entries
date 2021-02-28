@@ -2,21 +2,14 @@
 /undo.c/1.58/Tue Apr 10 04:57:08 2018//
 /region.c/1.38/Result of merge//
 /Makefile/1.35/Result of merge//
-/dired.c/1.93/Result of merge//
-/fileio.c/1.106/Result of merge//
-/main.c/1.87/Result of merge//
 /ttyio.c/1.38/Result of merge//
-/def.h/1.166/Result of merge+Sat Feb 15 14:26:34 2020//
 /re_search.c/1.35/Result of merge//
 /README/1.14/Fri Jul 31 12:06:05 2020//
 /autoexec.c/1.17/Fri Jul 31 12:06:05 2020//
-/basic.c/1.49/Fri Jul 31 12:06:05 2020//
 /bell.c/1.5/Fri Jul 31 12:06:05 2020//
-/buffer.c/1.107/Fri Jul 31 12:06:05 2020//
 /chrdef.h/1.10/Fri Jul 31 12:06:05 2020//
 /cinfo.c/1.18/Fri Jul 31 12:06:05 2020//
 /cmode.c/1.17/Fri Jul 31 12:06:05 2020//
-/cscope.c/1.18/Fri Jul 31 12:06:05 2020//
 /dir.c/1.31/Fri Jul 31 12:06:05 2020//
 /display.c/1.48/Fri Jul 31 12:06:05 2020//
 /echo.c/1.66/Fri Jul 31 12:06:05 2020//
@@ -26,7 +19,6 @@
 /funmap.h/1.8/Fri Jul 31 12:06:05 2020//
 /grep.c/1.48/Fri Jul 31 12:06:05 2020//
 /help.c/1.35/Fri Jul 31 12:06:05 2020//
-/interpreter.c/1.5/Fri Jul 31 12:06:05 2020//
 /kbd.c/1.34/Fri Jul 31 12:06:05 2020//
 /kbd.h/1.19/Fri Jul 31 12:06:05 2020//
 /key.h/1.6/Fri Jul 31 12:06:05 2020//
@@ -37,18 +29,26 @@
 /macro.c/1.16/Fri Jul 31 12:06:05 2020//
 /macro.h/1.7/Fri Jul 31 12:06:05 2020//
 /match.c/1.21/Fri Jul 31 12:06:05 2020//
-/mg.1/1.118/Fri Jul 31 12:06:05 2020//
 /modes.c/1.21/Fri Jul 31 12:06:05 2020//
 /paragraph.c/1.46/Fri Jul 31 12:06:05 2020//
 /pathnames.h/1.1/Fri Jul 31 12:06:05 2020//
 /search.c/1.47/Fri Jul 31 12:06:05 2020//
 /spawn.c/1.12/Fri Jul 31 12:06:05 2020//
 /tty.c/1.37/Fri Jul 31 12:06:05 2020//
-/ttykbd.c/1.19/Fri Jul 31 12:06:05 2020//
 /tutorial/1.18/Fri Jul 31 12:06:05 2020//
 /util.c/1.42/Fri Jul 31 12:06:05 2020//
 /version.c/1.10/Fri Jul 31 12:06:05 2020//
 /window.c/1.36/Fri Jul 31 12:06:05 2020//
 /word.c/1.19/Fri Jul 31 12:06:05 2020//
 /yank.c/1.14/Fri Jul 31 12:06:05 2020//
+/basic.c/1.50/Sun Feb 28 21:39:49 2021//
+/buffer.c/1.108/Sun Feb 28 21:39:49 2021//
+/cscope.c/1.19/Sun Feb 28 21:39:49 2021//
+/def.h/1.167/Result of merge//
+/dired.c/1.96/Result of merge//
+/fileio.c/1.107/Result of merge//
+/interpreter.c/1.6/Sun Feb 28 21:39:49 2021//
+/main.c/1.88/Result of merge//
+/mg.1/1.120/Sun Feb 28 21:39:49 2021//
+/ttykbd.c/1.20/Sun Feb 28 21:39:49 2021//
 D
