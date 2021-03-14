@@ -1,4 +1,4 @@
-/*      $OpenBSD: interpreter.c,v 1.6 2021/02/24 14:17:18 lum Exp $	*/
+/*      $OpenBSD: interpreter.c,v 1.9 2021/03/08 20:01:43 lum Exp $	*/
 /*
  * This file is in the public domain.
  *
@@ -22,10 +22,13 @@
  * 1. Give multiple arguments to a function that usually would accept only one:
  * (find-file a.txt b.txt. c.txt)
  *
- * 2. Define a list:
- * (define myfiles(list d.txt e.txt))
+ * 2. Define a single value variable:
+ * (define myfile d.txt)
  *
- * 3. Use the previously defined list:
+ * 3. Define a list:
+ * (define myfiles(list e.txt f.txt))
+ *
+ * 4. Use the previously defined variable or list:
  * (find-file myfiles)
  *
  * To do:
@@ -56,8 +59,7 @@
 static int	 multiarg(char *);
 static int	 isvar(char **, char **, int);
 static int	 foundvar(char *);
-static int	 foundlist(char *);
-
+static int	 doregex(char *, char *);
 
 /*
  * Structure for variables during buffer evaluation.
@@ -76,7 +78,6 @@ SLIST_HEAD(vlisthead, varentry) varhead = SLIST_HEAD_INITIALIZER(varhead);
 static int
 multiarg(char *funstr)
 {
-	regex_t  regex_buff;
 	PF	 funcp;
 	char	 excbuf[BUFSIZE], argbuf[BUFSIZE], *contbuf, tmpbuf[BUFSIZE];
 	char	*cmdp, *argp, *fendp, *endp, *p, *t, *s = " ";
@@ -93,24 +94,12 @@ multiarg(char *funstr)
 	if (*p != '\0')
 		*p = '\0';
 	/* we now know that string starts with '(' and ends with ')' */
-	if (regcomp(&regex_buff, "^[(][\t ]*[)]$", REG_EXTENDED)) {
-		regfree(&regex_buff);
-		return (dobeep_msg("Could not compile regex"));
-	}
-	if (!regexec(&regex_buff, funstr, 0, NULL, 0)) {
-		regfree(&regex_buff);
-		return (dobeep_msg("No command found"));
-	}
-	/* currently there are no mg commands that don't have a letter */
-	if (regcomp(&regex_buff, "^[(][\t ]*[A-Za-z-]+[\t ]*[)]$",
-	    REG_EXTENDED)) {
-		regfree(&regex_buff);
-		return (dobeep_msg("Could not compile regex"));
-	}
-	if (!regexec(&regex_buff, funstr, 0, NULL, 0))
+        if (doregex("^[(][\t ]*[)]$", funstr))
+                return(dobeep_msg("No command found"));
+
+        if (doregex("^[(][\t ]*[A-Za-z-]+[\t ]*[)]$", funstr))
 		singlecmd = 1;
 
-	regfree(&regex_buff);
 	p = funstr + 1;		/* move past first '(' char.	*/
 	cmdp = skipwhite(p);	/* find first char of command.	*/
 
@@ -268,13 +257,12 @@ isvar(char **argp, char **tmpbuf, int sizof)
  * the issues.
  */
 static int
-foundlist(char *defstr)
+foundvar(char *defstr)
 {
 	struct varentry *vt, *v1 = NULL;
 	const char	 e[2] = "e", t[2] = "t";
 	char		*p, *vnamep, *vendp = NULL, *valp, *o;
-	int		 spc;
-
+	int		 spc, foundlist = 0;
 
 	p = defstr + 1;         /* move past first '(' char.    */
 	p = skipwhite(p);    	/* find first char of 'define'. */
@@ -287,7 +275,10 @@ foundlist(char *defstr)
 	/* now find the end of the list name */
 	while (1) {
 		++vendp;
-		if (*vendp == '(' || *vendp == ' ' || *vendp == '\t')
+		if (*vendp == '(') {
+			foundlist = 1;
+			break;
+		} else if (*vendp == ' ' || *vendp == '\t')
 			break;
 	}
 	*vendp = '\0';
@@ -299,8 +290,12 @@ foundlist(char *defstr)
 		return(dobeep_msgs("Variable/function name clash:", vnamep));
 
 	p = ++vendp;
-	p = strstr(p, t);	/* find 't' in 'list'.	*/
-	valp = skipwhite(++p);	/* find first value	*/
+	p = skipwhite(p);
+	if (foundlist) {
+		p = strstr(p, t);	/* find 't' in 'list'.	*/
+		valp = skipwhite(++p);	/* find first value	*/
+	} else
+		valp = p;
 	/*
 	 * Now we have the name of the list starting at 'vnamep',
 	 * and the first value is at 'valp', record the details
@@ -345,17 +340,10 @@ foundlist(char *defstr)
 	if ((v1->vals = strndup(valp, BUFSIZE)) == NULL)
 		return(dobeep_msg("strndup error"));
 
-	return (TRUE);
-}
+#ifdef  MGLOG
+        mglog_misc("var:%s\t#items:%d\tvals:%s\n", vnamep, v1->count, v1->vals);
+#endif
 
-
-/*
- * to do
- */
-static int
-foundvar(char *funstr)
-{
-	ewprintf("to do");
 	return (TRUE);
 }
 
@@ -385,42 +373,67 @@ clearvars(void)
 int
 foundparen(char *funstr)
 {
-	regex_t  regex_buff;
-	char	*regs;
+	char	*regs, *p;
+	int      pctr;
+
+	pctr = 0;
+
+	/*
+	 * Check for blocks of code with opening and closing ().
+	 * One block = (cmd p a r a m)
+	 * Two blocks = (cmd p a r a m s)(hola)
+	 * Two blocks = (cmd p a r (list a m s))(hola)
+	 * Only single line at moment, but more for multiline.
+	 */
+	p = funstr;
+	while (*p != '\0') {
+		if (*p == '(') {
+			pctr++;
+		} else if (*p == ')') {
+			pctr--;
+		}
+		p++;
+	}
+	if (pctr != 0)
+		return(dobeep_msg("Opening and closing parentheses error"));
 
 	/* Does the line have a list 'define' like: */
 	/* (define alist(list 1 2 3 4)) */
 	regs = "^[(][\t ]*define[\t ]+[^\t (]+[\t ]*[(][\t ]*list[\t ]+"\
 		"[^\t ]+.*[)][\t ]*[)]";
-	if (regcomp(&regex_buff, regs, REG_EXTENDED)) {
-		regfree(&regex_buff);
-		return(dobeep_msg("Could not compile regex"));
-	}
-	if (!regexec(&regex_buff, funstr, 0, NULL, 0)) {
-		regfree(&regex_buff);
-		return(foundlist(funstr));
-	}
+	if (doregex(regs, funstr))
+		return(foundvar(funstr));
+
 	/* Does the line have a single variable 'define' like: */
 	/* (define i 0) */
 	regs = "^[(][\t ]*define[\t ]+[^\t (]+[\t ]*[^\t (]+[\t ]*[)]";
-	if (regcomp(&regex_buff, regs, REG_EXTENDED)) {
-		regfree(&regex_buff);
-		return(dobeep_msg("Could not compile regex"));
-	}
-	if (!regexec(&regex_buff, funstr, 0, NULL, 0)) {
-		regfree(&regex_buff);
-		return(foundvar(funstr));
-	}
+        if (doregex(regs, funstr))
+                return(foundvar(funstr));
+
 	/* Does the line have an unrecognised 'define' */
 	regs = "^[(][\t ]*define[\t ]+";
-	if (regcomp(&regex_buff, regs, REG_EXTENDED)) {
+        if (doregex(regs, funstr))
+                return(dobeep_msg("Invalid use of define"));
+
+	return(multiarg(funstr));
+}
+
+/*
+ * Test a string against a regular expression.
+ */
+int
+doregex(char *r, char *e)
+{
+	regex_t  regex_buff;
+
+	if (regcomp(&regex_buff, r, REG_EXTENDED)) {
 		regfree(&regex_buff);
-		return(dobeep_msg("Could not compile regex"));
+		return(dobeep_msg("Regex compilation error"));
 	}
-	if (!regexec(&regex_buff, funstr, 0, NULL, 0)) {
+	if (!regexec(&regex_buff, e, 0, NULL, 0)) {
 		regfree(&regex_buff);
-		return(dobeep_msg("Invalid use of define"));
+		return(TRUE);
 	}
 	regfree(&regex_buff);
-	return(multiarg(funstr));
+	return(FALSE);
 }

@@ -1,4 +1,4 @@
-/*	$OpenBSD: echo.c,v 1.66 2016/10/24 17:18:42 jasper Exp $	*/
+/*	$OpenBSD: echo.c,v 1.68 2021/03/02 15:03:35 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -323,7 +323,7 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 			break;
 		case CCHR('Y'): /* yank from kill buffer */
 			i = 0;
-			while ((y = kremove(i++)) >= 0 && y != '\n') {
+			while ((y = kremove(i++)) >= 0 && y != *curbp->b_nlchr) {
 				int t;
 				if (dynbuf && epos + 1 >= nbuf) {
 					void *newp;
@@ -336,8 +336,8 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 				}
 				if (!dynbuf && epos + 1 >= nbuf) {
 					dobeep();
-					ewprintf("Line too long");
-					return (emptyval);
+					ewprintf("Line too long. Press Control-g to escape.");
+					goto skipkey;
 				}
 				for (t = epos; t > cpos; t--)
 					buf[t] = buf[t - 1];
@@ -492,8 +492,8 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 			}
 			if (!dynbuf && epos + 1 >= nbuf) {
 				dobeep();
-				ewprintf("Line too long");
-				return (emptyval);
+				ewprintf("Line too long. Press Control-g to escape.");
+				goto skipkey;
 			}
 			for (i = epos; i > cpos; i--)
 				buf[i] = buf[i - 1];
@@ -507,6 +507,9 @@ veread(const char *fp, char *buf, size_t nbuf, int flag, va_list ap)
 			ttmove(rr, cc);
 			ttflush();
 		}
+
+skipkey:	/* ignore key press */
+;
 	}
 done:
 	if (cwin == TRUE) {
