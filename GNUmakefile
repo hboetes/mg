@@ -19,11 +19,11 @@ STRIP=		/usr/bin/strip
 
 UNAME:=		$(shell uname)
 ifeq ($(UNAME),FreeBSD)
-  BSD_CPPFLAGS:=
-  BSD_LIBS:=	-lutil
+  BSD_CPPFLAGS:= -DHAVE_UTIL_H
+  BSD_LIBS:=	 -lutil
 else
-  BSD_CPPFLAGS:= $(shell $(PKG_CONFIG) --cflags libbsd-overlay)
-  BSD_LIBS:=	 $(shell $(PKG_CONFIG) --libs libbsd-overlay)
+  BSD_CPPFLAGS:= $(shell $(PKG_CONFIG) --cflags libbsd-overlay) -DHAVE_PTY_H
+  BSD_LIBS:=	 $(shell $(PKG_CONFIG) --libs libbsd-overlay) -lutil
 endif
 
 # Test is some required libraries are installed. Rather bummer that

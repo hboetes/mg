@@ -16,6 +16,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#if HAVE_PTY_H
+#include <pty.h>
+#elif HAVE_UTIL_H
+#include <util.h>
+#endif
+
 #include "def.h"
 #include "kbd.h"
 #include "funmap.h"
