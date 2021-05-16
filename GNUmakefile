@@ -72,7 +72,7 @@ $(name): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $(name) $(LIBS)
 
 distclean: clean
-	-rm -f *.core core.*
+	-rm -f *.core core.* .#*
 
 clean:
 	-rm -f *.o $(name)$(EXE_EXT)
