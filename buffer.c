@@ -1,4 +1,4 @@
-
+/* $OpenBSD: buffer.c,v 1.112 2021/03/26 15:02:10 lum Exp $ */
 
 /* This file is in the public domain. */
 
@@ -78,6 +78,7 @@ int
 usebufname(const char *bufp)
 {
 	struct buffer *bp = NULL;
+	int ret;
 
 	if (bufp == NULL) {
 		if ((bp = bfind("*scratch*", TRUE)) == NULL)
@@ -89,7 +90,10 @@ usebufname(const char *bufp)
 
 	/* and put it in current window */
 	curbp = bp;
-	return (showbuffer(bp, curwp, WFFRAME | WFFULL));
+	ret = showbuffer(bp, curwp, WFFRAME | WFFULL);
+	eerase();
+
+	return (ret);
 }
 
 /*
@@ -140,7 +144,7 @@ poptobuffer(int f, int n)
 		return (ABORT);
 	if (bufp[0] == '\0' && curbp->b_altb != NULL)
 		bp = curbp->b_altb;
-	else if ((bp = bfind(bufn, TRUE)) == NULL)
+	else if ((bp = bfind(bufp, TRUE)) == NULL)
 		return (FALSE);
 	if (bp == curbp)
 		return (splitwind(f, n));
@@ -165,6 +169,7 @@ killbuffer_cmd(int f, int n)
 {
 	struct buffer *bp;
 	char    bufn[NBUFN], *bufp;
+	int 	ret;
 
 	if (f & FFRAND) /* dired mode 'q' */
 		bp = curbp;
@@ -173,9 +178,12 @@ killbuffer_cmd(int f, int n)
 		return (ABORT);
 	else if (bufp[0] == '\0')
 		bp = curbp;
-	else if ((bp = bfind(bufn, FALSE)) == NULL)
+	else if ((bp = bfind(bufp, FALSE)) == NULL)
 		return (FALSE);
-	return (killbuffer(bp));
+	ret = killbuffer(bp);
+	eerase();
+
+	return (ret);
 }
 
 int
@@ -360,9 +368,9 @@ makelist(void)
 		}
 
 		if (addlinef(blp, "%c%c%c %-*.*s%c%-6d %-*s",
-		    (bp == curbp) ? '.' : ' ',	/* current buffer ? */
+		    (bp == curbp) ? '>' : ' ',	/* current buffer ? */
 		    ((bp->b_flag & BFCHG) != 0) ? '*' : ' ',	/* changed ? */
-		    ((bp->b_flag & BFREADONLY) != 0) ? ' ' : '*',
+		    ((bp->b_flag & BFREADONLY) != 0) ? '*' : ' ',
 		    w - 5,		/* four chars already written */
 		    w - 5,		/* four chars already written */
 		    bp->b_bname,	/* buffer name */
@@ -774,7 +782,7 @@ bufferinsert(int f, int n)
 		return (ABORT);
 	if (bufp[0] == '\0' && curbp->b_altb != NULL)
 		bp = curbp->b_altb;
-	else if ((bp = bfind(bufn, FALSE)) == NULL)
+	else if ((bp = bfind(bufp, FALSE)) == NULL)
 		return (FALSE);
 
 	if (bp == curbp)

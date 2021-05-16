@@ -1,4 +1,4 @@
-/*	$OpenBSD: extend.c,v 1.72 2021/03/01 10:51:14 lum Exp $	*/
+/*	$OpenBSD: extend.c,v 1.75 2021/05/06 14:16:12 lum Exp $	*/
 /* This file is in the public domain. */
 
 /*
@@ -570,19 +570,24 @@ extend(int f, int n)
 
 /*
  * evalexpr - get one line from the user, and run it.
+ * Use strlen for length of line, assume user is not typing in a '\0' in the
+ * modeline. llen only used for foundparen() so old-school will be ok.
  */
 /* ARGSUSED */
 int
 evalexpr(int f, int n)
 {
 	char	 exbuf[BUFSIZE], *bufp;
+	int	 llen;
 
 	if ((bufp = eread("Eval: ", exbuf, sizeof(exbuf),
 	    EFNEW | EFCR)) == NULL)
 		return (ABORT);
 	else if (bufp[0] == '\0')
 		return (FALSE);
-	return (excline(exbuf));
+	llen = strlen(bufp);
+
+	return (excline(exbuf, llen, 1));
 }
 
 /*
@@ -595,22 +600,24 @@ evalbuffer(int f, int n)
 {
 	struct line		*lp;
 	struct buffer		*bp = curbp;
-	int		 s;
+	int		 s, llen, lnum = 0;
 	static char	 excbuf[BUFSIZE];
 
 	for (lp = bfirstlp(bp); lp != bp->b_headp; lp = lforw(lp)) {
-		if (llength(lp) >= BUFSIZE)
+		lnum++;
+		llen = llength(lp);
+		if (llen >= BUFSIZE)
 			return (FALSE);
-		(void)strncpy(excbuf, ltext(lp), llength(lp));
+		(void)strncpy(excbuf, ltext(lp), llen);
 
-		/* make sure it's terminated */
-		excbuf[llength(lp)] = '\0';
-		if ((s = excline(excbuf)) != TRUE) {
-			(void) clearvars();
+		/* make sure the line is terminated */
+		excbuf[llen] = '\0';
+		if ((s = excline(excbuf, llen, lnum)) != TRUE) {
+			cleanup();
 			return (s);
 		}
 	}
-	(void) clearvars();
+	cleanup();
 	return (TRUE);
 }
 
@@ -661,7 +668,7 @@ load(const char *fname)
 	    == FIOSUC) {
 		line++;
 		excbuf[nbytes] = '\0';
-		if (excline(excbuf) != TRUE) {
+		if (excline(excbuf, nbytes, line) != TRUE) {
 			s = FIOERR;
 			dobeep();
 			ewprintf("Error loading file %s at line %d", fncpy, line);
@@ -670,7 +677,7 @@ load(const char *fname)
 	}
 	(void)ffclose(ffp, NULL);
 	excbuf[nbytes] = '\0';
-	if (s != FIOEOF || (nbytes && excline(excbuf) != TRUE))
+	if (s != FIOEOF || (nbytes && excline(excbuf, nbytes, ++line) != TRUE))
 		return (FALSE);
 	return (TRUE);
 }
@@ -679,7 +686,7 @@ load(const char *fname)
  * excline - run a line from a load file or eval-expression.
  */
 int
-excline(char *line)
+excline(char *line, int llen, int lnum)
 {
 	PF	 fp;
 	struct line	*lp, *np;
@@ -706,7 +713,7 @@ excline(char *line)
 	if (*funcp == '\0')
 		return (TRUE);	/* No error on blank lines */
 	if (*funcp == '(')
-		return (foundparen(funcp));
+		return (foundparen(funcp, llen, lnum));
 	line = parsetoken(funcp);
 	if (*line != '\0') {
 		*line++ = '\0';

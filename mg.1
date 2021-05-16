@@ -1,7 +1,7 @@
-.\"	$OpenBSD: mg.1,v 1.120 2021/02/23 18:45:33 lum Exp $
+.\"	$OpenBSD: mg.1,v 1.125 2021/05/02 14:13:17 lum Exp $
 .\" This file is in the public domain.
 .\"
-.Dd $Mdocdate: February 23 2021 $
+.Dd $Mdocdate: May 2 2021 $
 .Dt MG 1
 .Os
 .Sh NAME
@@ -10,6 +10,7 @@
 .Sh SYNOPSIS
 .Nm mg
 .Op Fl nR
+.Op Fl b Ar file
 .Op Fl f Ar mode
 .Op Fl u Ar file
 .Op + Ns Ar number
@@ -35,6 +36,12 @@ sign and the number).
 If a negative number is specified, the line number counts
 backwards from the end of the file i.e. +-1 will be the last
 line of the file, +-2 will be second last, and so on.
+.It Fl b Ar file
+Turn on batch mode and execute the
+.Nm
+commands found in the specified
+.Ar file
+and then terminate.
 .It Fl f Ar mode
 Run the mode command for all buffers created from
 arguments on the command line, including the
@@ -198,6 +205,8 @@ list-buffers
 save-buffers-kill-emacs
 .It C-x C-f
 find-file
+.It C-x C-j
+dired-jump
 .It C-x C-g
 keyboard-quit
 .It C-x C-l
@@ -523,6 +532,8 @@ Display the name of the function currently bound to the key.
 View the differences between buffer and its associated file.
 .It digit-argument
 Process a numerical argument for keyboard-invoked functions.
+.It dired-jump
+Open a dired buffer containing the current buffer's directory location.
 .It downcase-region
 Set all characters in the region to lower case.
 .It downcase-word
@@ -685,6 +696,11 @@ directory.
 Toggle whether the line number is displayed in the modeline.
 .It list-buffers
 Display the list of available buffers.
+The first column in the output indicates which buffer is active with a '>'
+character.
+The second column indicates which buffers are modified.
+The third column indicates which buffers are read-only.
+The remaining columns are self-explanatory.
 .It load
 Prompt the user for a filename, and then execute commands
 from that file.
@@ -762,6 +778,8 @@ Display current (global) working directory in the status area.
 .It query-replace
 Query Replace.
 Search and replace strings selectively, prompting after each match.
+.It replace-regexp
+Replace regular expression globally without individual prompting.
 .It replace-string
 Replace string globally without individual prompting.
 .It query-replace-regexp
@@ -1050,6 +1068,8 @@ Refresh the dired buffer while retaining any flags.
 Scroll down the dired buffer.
 .It dired-scroll-up
 Scroll up the dired buffer.
+.It dired-shell-command
+Pipe the file under the current cursor position through a shell command.
 .It dired-unmark
 Remove the deletion flag for the file on the current line.
 .It dired-unmark-backward
