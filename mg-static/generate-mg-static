@@ -1,0 +1,77 @@
+#!/bin/sh
+
+# This Makefile has been written by Han Boetes
+# <hboetes@gmail.com> and is released in Public Domain.
+
+isinpath () {
+        command -v $1 >&/dev/null
+}
+
+for i in podman buildah; do
+    if ! isinpath $i; then
+        echo "$0: $i is a required dependency for this script" >&2
+        EXIT=true
+    fi
+done
+
+if [ "$EXIT" = true ]; then
+    exit 1
+fi
+
+usage() {
+    name=${0##*/}
+    cat << EOF >&2
+This script can build a static binary for mg, like this:
+./$name tag      -- build the latest tagged version
+./$name latest   -- build the latest version
+EOF
+    exit 1
+}
+
+# Create the first part of the Containerfile
+cat << EOF > Containerfile
+FROM docker.io/library/alpine
+RUN apk update
+RUN apk add git libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
+RUN git clone https://github.com/hboetes/mg.git
+WORKDIR mg
+EOF
+
+# Finish the Containerfile
+case $1 in
+    latest)
+        cat << EOF >> Containerfile
+RUN make STATIC=1; \
+    strip mg; \
+    ln mg mg-static-x86_64
+EOF
+        ;;
+    tag)
+        cat << EOF >> Containerfile
+RUN TAG=\$(git describe --tags); \
+    git checkout \$TAG; \
+    make STATIC=1; \
+    strip mg; \
+    ln mg mg-\$TAG-static-x86_64
+EOF
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+cat << EOF > ./helper-script
+#!/bin/sh
+mnt=\$(podman image mount localhost/mg-static)
+cp \$mnt/mg/mg-* .
+EOF
+chmod 755 ./helper-script
+
+podman image rm localhost/mg-static
+buildah build -f Containerfile -t mg-static
+podman image ls | awk '/localhost\/mg-static/ {print $3}'
+podman unshare ./helper-script
+
+# Clean up the mess
+rm -f Containerfile helper-script
+podman image rm localhost/mg-static
