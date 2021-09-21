@@ -1,3 +1,4 @@
 packages
 *.o
 mg
+mg-static/mg-*
