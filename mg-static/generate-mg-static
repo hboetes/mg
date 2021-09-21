@@ -63,13 +63,12 @@ esac
 cat << EOF > ./helper-script
 #!/bin/sh
 mnt=\$(podman image mount localhost/mg-static)
-cp \$mnt/mg/mg-* .
+cp \$mnt/mg/mg-*static-x86_64 .
 EOF
 chmod 755 ./helper-script
 
 podman image rm localhost/mg-static
 buildah build -f Containerfile -t mg-static
-podman image ls | awk '/localhost\/mg-static/ {print $3}'
 podman unshare ./helper-script
 
 # Clean up the mess
