@@ -50,7 +50,7 @@ sudo make install
 
 *Kudos to Leonid Bobrov(@mazocomp) for adding CMAKE support.*
 
-## STATIC BUILDS
+## STATIC BUILDS (on Linux)
 
 I recently figured out how to make really portable static builds: On an
 alpine linux system, build with the command:
@@ -59,6 +59,9 @@ make STATIC=yesplease
 ```
 glibc does not really support static binaries. https://www.musl-libc.org/
 does not have this problem.
+
+To make building static binaries more easy check the mg-static directory, there
+is a script which can build static binaries with support of podman and buildah.
 
 
 ## USING CVS
