@@ -1,25 +1,25 @@
 # PORTING MG AND USING LIBBSD
 
 I've maintained and ported mg for quite some time now and at first it
-was easy recently it got harder and harder since it was a moving
+was easy recently it got harder and harder, since it was a moving
 target. Especially the inclusion of some system specific libraries since
 about 2 years ago made it too much of an effort for my humble coding
 skills.
 
 So recently Jasper Lievisse Adriaanse asked me to try it again and I
 restarted working on the project and ran into exactly the same problems
-again. While googling for solutions I ran into libbsd:
+again. While googling for solutions, I ran into libbsd:
 
   http://libbsd.freedesktop.org/wiki/
 
-It's a porting library for OpenBSD code! And after installing that it
+It's a porting library for OpenBSD code! And after installing that, it
 was a piece of pie to get mg ported again.
 
 ## PORTING TO ALL OTHER PLATFORMS
 
-Okay, that was debian. Now I have to get the rest of all the previously
+Okay, that was Debian. Now I have to get the rest of all the previously
 supported platforms working again. All help is welcome and as always:
-Please provide patches that do not break stuff for other platforms.
+Please provide patches, that do not break stuff for other platforms.
 
 ## BUILDING MG
 
@@ -60,13 +60,13 @@ make STATIC=yesplease
 glibc does not really support static binaries. https://www.musl-libc.org/
 does not have this problem.
 
-To make building static binaries more easy check the mg-static directory, there
+To make building static binaries more easy, check the mg-static directory, there
 is a script which can build static binaries with support of podman and buildah.
 
 
 ## USING CVS
 
-This code is the cvs checkout from the OpenBSD project so if you install
+This code is the cvs checkout from the OpenBSD project, so if you install
 cvs you can see what I changed to port mg. Like this:
 
 ```
