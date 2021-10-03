@@ -22,48 +22,59 @@ usage() {
     name=${0##*/}
     cat << EOF >&2
 This script can build a static binary for mg, like this:
-./$name tag      -- build the latest tagged version
-./$name latest   -- build the latest version
+./$name tag      -- build the latest tagged 64-bit version
+./$name latest   -- build the latest 64-bit version
+./$name tag32    -- build the latest tagged 32-bit version
+./$name latest32 -- build the latest 32-bit version
 EOF
     exit 1
 }
 
-# Create the first part of the Containerfile
-cat << EOF > Containerfile
-FROM docker.io/library/alpine
-RUN apk update
-RUN apk add git libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
-RUN git clone https://github.com/hboetes/mg.git
-WORKDIR mg
-EOF
-
-# Finish the Containerfile
 case $1 in
-    latest)
-        cat << EOF >> Containerfile
-RUN make STATIC=1; \
-    strip mg; \
-    ln mg mg-static-x86_64
-EOF
+    latest|latest64)
+        ext=_64
+        TCMD=':'
+        IMPTH=library
         ;;
-    tag)
-        cat << EOF >> Containerfile
-RUN TAG=\$(git describe --tags); \
-    git checkout \$TAG; \
-    make STATIC=1; \
-    strip mg; \
-    ln mg mg-\$TAG-static-x86_64
-EOF
+    tag|tag64)
+        ext=_64
+        TCMD='git tag|tail -n 1'
+        IMPTH=library
+        ;;
+    latest32)
+        ext=
+        TCMD=':'
+        IMPTH=i386
+        ;;
+    tag32)
+        ext=
+        TCMD='git tag|tail -n 1'
+        IMPTH=i386
         ;;
     *)
         usage
         ;;
 esac
 
+# Create the Containerfile
+cat << EOF > Containerfile
+FROM docker.io/$IMPTH/alpine
+RUN apk update
+RUN apk add git libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
+RUN git clone https://github.com/hboetes/mg.git
+WORKDIR mg
+RUN TAG=\$($TCMD); \
+    git checkout \$TAG; \
+    make STATIC=1; \
+    strip mg; \
+    ln mg mg-\$TAG-static-x86$ext
+EOF
+
+
 cat << EOF > ./helper-script
 #!/bin/sh
 mnt=\$(podman image mount localhost/mg-static)
-cp \$mnt/mg/mg-*static-x86_64 .
+cp \$mnt/mg/mg-*static-x86* .
 EOF
 chmod 755 ./helper-script
 
