@@ -127,7 +127,7 @@ foundparen(char *funstr, int llen, int lnum)
 	const char	*lrp = NULL;
 	char		*p, *begp = NULL, *endp = NULL, *prechr;
 	char		*lastchr = NULL;
-	int     	 i, ret, pctr, expctr, blkid, inquote, esc;
+	int     	 i, ret = 255, pctr, expctr, blkid, inquote, esc;
 	int		 elen, spc, ns;
 
 	pctr = expctr = inquote = esc = elen = spc = ns = 0;
