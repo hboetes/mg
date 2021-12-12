@@ -628,7 +628,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 	char	*argp, *endp, *p, *v, *s = " ";
 	char	*regs;
 	int	 spc, cnt;
-	int	 inlist, sizof, fin, inquote;
+	int	 sizof, fin, inquote;
 
 	/* now find the first argument */
 	p = skipwhite(valp);
@@ -637,7 +637,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 		return (dobeep_msg("strlcpy error"));
 	argp = argbuf;
 	spc = 1; /* initially fake a space so we find first argument */
-	inlist = fin = inquote = cnt = spc = 0;
+	fin = inquote = cnt = spc = 0;
 
 	for (p = argbuf; *p != '\0'; p++) {
 		if (*(p + 1) == '\0')
