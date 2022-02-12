@@ -1,4 +1,4 @@
-/*      $OpenBSD: interpreter.c,v 1.32 2021/05/12 11:13:23 lum Exp $	*/
+/*      $OpenBSD: interpreter.c,v 1.34 2022/01/28 06:18:41 guenther Exp $	*/
 /*
  * This file is in the public domain.
  *
@@ -8,7 +8,7 @@
 /*
  * This file attempts to add some 'scripting' functionality into mg.
  *
- * The initial goal is to give mg the ability to use it's existing functions
+ * The initial goal is to give mg the ability to use its existing functions
  * and structures in a linked-up way. Hopefully resulting in user definable
  * functions. The syntax is 'scheme' like but currently it is not a scheme
  * interpreter.
@@ -493,7 +493,7 @@ multiarg(char *cmdp, char *argbuf, int numparams)
        			if (!doregex(regs, argp)) {
 				const char *errstr;
 
-				(void)strtonum(argp, 0, INT_MAX, &errstr);
+				strtonum(argp, 0, INT_MAX, &errstr);
 				if (errstr != NULL)
 					return (dobeep_msgs("Var not found:",
 					    argp));
@@ -693,7 +693,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 			} else {
 				const char *errstr;
 
-				(void)strtonum(argp, 0, INT_MAX, &errstr);
+				strtonum(argp, 0, INT_MAX, &errstr);
 				if (errstr != NULL)
 					return (dobeep_msgs("Var not found:",
 					    argp));
