@@ -23,7 +23,6 @@
 /pathnames.h/1.1/Sun Aug  1 20:42:15 2021//
 /search.c/1.47/Sun Aug  1 20:42:15 2021//
 /spawn.c/1.12/Sun Aug  1 20:42:15 2021//
-/tutorial/1.18/Sun Aug  1 20:42:15 2021//
 /version.c/1.10/Sun Aug  1 20:42:15 2021//
 /window.c/1.36/Sun Aug  1 20:42:15 2021//
 /word.c/1.19/Sun Aug  1 20:42:15 2021//
@@ -51,4 +50,5 @@
 /cmode.c/1.18/Sat Jun 11 23:27:52 2022//
 /cscope.c/1.21/Sat Jun 11 23:27:52 2022//
 /util.c/1.44/Sat Jun 11 23:27:52 2022//
+/tutorial/1.19/Sat Jul 23 09:28:43 2022//
 D
