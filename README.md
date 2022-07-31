@@ -72,3 +72,11 @@ cvs you can see what I changed to port mg. Like this:
 ```
 CVS_RSH=ssh cvs diff -uw
 ```
+
+## FEATURE REQUESTS
+I just maintain the port, so I import all changes from OpenBSD mg:
+https://cvsweb.openbsd.org/src/usr.bin/mg/?sortby=date#dirlist
+
+So your best course of action is to send them a feature request, or
+even better, to send them a patch. Once it has been implemented you
+can ask me to sync with the upstream repo, and I'll do that ASAP.
