@@ -33,7 +33,7 @@ EOF
 case $1 in
     latest|latest64)
         ext=_64
-        TCMD=':'
+        TCMD='date +latest%Y%m%d'
         IMPTH=library
         ;;
     tag|tag64)
@@ -43,7 +43,7 @@ case $1 in
         ;;
     latest32)
         ext=
-        TCMD=':'
+        TCMD='date +latest%Y%m%d'
         IMPTH=i386
         ;;
     tag32)
@@ -59,8 +59,8 @@ esac
 # Create the Containerfile
 cat << EOF > Containerfile
 FROM docker.io/$IMPTH/alpine
-RUN apk update
-RUN apk add git libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
+RUN apk upgrade
+RUN apk add git libbsd-static libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
 RUN git clone https://github.com/hboetes/mg.git
 WORKDIR mg
 RUN TAG=\$($TCMD); \
