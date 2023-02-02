@@ -22,34 +22,36 @@ usage() {
     name=${0##*/}
     cat << EOF >&2
 This script can build a static binary for mg, like this:
-./$name tag      -- build the latest tagged 64-bit version
-./$name latest   -- build the latest 64-bit version
-./$name tag32    -- build the latest tagged 32-bit version
-./$name latest32 -- build the latest 32-bit version
+./$name [amd64|i386|arm64v8|arm32v7] [tag|latest]
+Make sure your architecture is compatible.
 EOF
     exit 1
 }
 
 case $1 in
-    latest|latest64)
-        ext=_64
+    amd64)
+        ext=$1
+        ;;
+    arm64v8)
+        ext=41
+        ;;
+    arm32v7)
+        ext=$1
+        ;;
+    i386)
+        ext=$1
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+case $2 in
+    latest)
         TCMD='date +latest%Y%m%d'
-        IMPTH=library
         ;;
-    tag|tag64)
-        ext=_64
+    tag)
         TCMD='git tag|tail -n 1'
-        IMPTH=library
-        ;;
-    latest32)
-        ext=
-        TCMD='date +latest%Y%m%d'
-        IMPTH=i386
-        ;;
-    tag32)
-        ext=
-        TCMD='git tag|tail -n 1'
-        IMPTH=i386
         ;;
     *)
         usage
@@ -58,7 +60,7 @@ esac
 
 # Create the Containerfile
 cat << EOF > Containerfile
-FROM docker.io/$IMPTH/alpine
+FROM docker.io/$ext/alpine
 RUN apk upgrade
 RUN apk add git libbsd-static libbsd-dev ncurses-dev musl-dev ncurses-static gcc make
 RUN git clone https://github.com/hboetes/mg.git
@@ -67,14 +69,14 @@ RUN TAG=\$($TCMD); \
     git checkout \$TAG; \
     make STATIC=1; \
     strip mg; \
-    ln mg mg-\$TAG-static-x86$ext
+    ln mg mg-\$TAG-static-$ext
 EOF
 
 
 cat << EOF > ./helper-script
 #!/bin/sh
 mnt=\$(podman image mount localhost/mg-static)
-cp \$mnt/mg/mg-*static-x86* .
+cp \$mnt/mg/mg-*static-* .
 EOF
 chmod 755 ./helper-script
 
