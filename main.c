@@ -1,3 +1,4 @@
+/*	$OpenBSD: main.c,v 1.94 2023/03/30 19:01:25 op Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -71,6 +72,8 @@ usage()
 int
 main(int argc, char **argv)
 {
+	FILE		*ffp;
+	char		 file[NFILEN];
 	char		*cp, *conffile = NULL, *init_fcn_name = NULL;
 	char		*batchfile = NULL;
 	PF		 init_fcn = NULL;
@@ -118,10 +121,11 @@ main(int argc, char **argv)
 		pty_init();
 		conffile = batchfile;
 	}
-	if (conffile != NULL && access(conffile, R_OK) != 0) {
-                fprintf(stderr, "%s: Problem with file: %s\n", __progname,
+	if ((ffp = startupfile(NULL, conffile, file, sizeof(file))) == NULL &&
+	    conffile != NULL) {
+		fprintf(stderr, "%s: Problem with file: %s\n", __progname,
 		    conffile);
-                exit(1);
+		exit(1);
 	}
 
 	argc -= optind;
@@ -170,8 +174,10 @@ main(int argc, char **argv)
 	update(CMODE);
 
 	/* user startup file. */
-	if ((cp = startupfile(NULL, conffile)) != NULL)
-		(void)load(cp);
+	if (ffp != NULL) {
+		(void)load(ffp, file);
+		ffclose(ffp, NULL);
+	}
 
 	if (batch)
 		return (0);
@@ -304,7 +310,7 @@ pty_init(void)
 	memset(&ws, 0, sizeof(ws));
 	ws.ws_col = 80,
 	ws.ws_row = 24;
-	
+
 	openpty(&master, &slave, NULL, NULL, &ws);
 	login_tty(slave);
 

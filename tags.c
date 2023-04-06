@@ -1,4 +1,4 @@
-/*	$OpenBSD: tags.c,v 1.18 2022/12/26 19:16:02 jmc Exp $	*/
+/*	$OpenBSD: tags.c,v 1.27 2023/03/29 19:09:04 op Exp $	*/
 
 /*
  * This file is in the public domain.
@@ -42,9 +42,6 @@ static void              unloadtags(void);
 
 #define DEFAULTFN "tags"
 
-char *tagsfn = NULL;
-int  loaded  = FALSE;
-
 /* ctags(1) entries are parsed and maintained in a tree. */
 struct ctag {
 	RB_ENTRY(ctag) entry;
@@ -73,75 +70,40 @@ ctagcmp(struct ctag *s, struct ctag *t)
 }
 
 /*
- * Record the filename that contain tags to be used while loading them
- * on first use. If a filename is already recorded, ask user to retain
- * already loaded tags (if any) and unload them if user chooses not to.
+ * Load a tags file.  If a tags file is already loaded, ask the user to
+ * retain loaded tags (i any) and unload them if the user chooses not to.
  */
-/* ARGSUSED */
 int
 tagsvisit(int f, int n)
 {
 	char fname[NFILEN], *bufp, *temp;
-	struct stat sb;
-	
+
 	if (getbufcwd(fname, sizeof(fname)) == FALSE)
 		fname[0] = '\0';
-	
+
 	if (strlcat(fname, DEFAULTFN, sizeof(fname)) >= sizeof(fname)) {
 		dobeep();
 		ewprintf("Filename too long");
 		return (FALSE);
 	}
-	
+
 	bufp = eread("Visit tags table (default %s): ", fname,
 	    NFILEN, EFFILE | EFCR | EFNEW | EFDEF, DEFAULTFN);
 	if (bufp == NULL)
 		return (ABORT);
 
-	if (stat(bufp, &sb) == -1) {
-		dobeep();
-		ewprintf("stat: %s", strerror(errno));
-		return (FALSE);
-	} else if (S_ISREG(sb.st_mode) == 0) {
-		dobeep();
-		ewprintf("Not a regular file");
-		return (FALSE);
-	} else if (access(bufp, R_OK) == -1) {
-		dobeep();
-		ewprintf("Cannot access file %s", bufp);
-		return (FALSE);
-	}
-	
-	if (tagsfn == NULL) {
-		if (bufp[0] == '\0') {
-			if ((tagsfn = strdup(fname)) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
-		} else {
-			/* bufp points to local variable, so duplicate. */
-			if ((tagsfn = strdup(bufp)) == NULL) {
-				dobeep();
-				ewprintf("Out of memory");
-				return (FALSE);
-			}
-		}
-	} else {
-		if ((temp = strdup(bufp)) == NULL) {
-			dobeep();
-			ewprintf("Out of memory");
-			return (FALSE);
-		}
-		free(tagsfn);
-		tagsfn = temp;
+	if (!RB_EMPTY(&tags)) {
 		if (eyorn("Keep current list of tags table also") == FALSE) {
 			ewprintf("Starting a new list of tags table");
 			unloadtags();
 		}
-		loaded = FALSE;
 	}
-	return (TRUE);
+
+	temp = bufp;
+	if (temp[0] == '\0')
+		temp = fname;
+
+	return (loadtags(temp));
 }
 
 /*
@@ -168,24 +130,16 @@ findtag(int f, int n)
 		tok = dtok;
 	else
 		tok = utok;
-	
+
 	if (tok[0] == '\0') {
 		dobeep();
 		ewprintf("There is no default tag");
 		return (FALSE);
 	}
-	
-	if (tagsfn == NULL)
+
+	if (RB_EMPTY(&tags))
 		if ((ret = tagsvisit(f, n)) != TRUE)
 			return (ret);
-	if (!loaded) {
-		if (loadtags(tagsfn) == FALSE) {
-			free(tagsfn);
-			tagsfn = NULL;
-			return (FALSE);
-		}
-		loaded = TRUE;
-	}
 	return pushtag(tok);
 }
 
@@ -196,7 +150,7 @@ void
 unloadtags(void)
 {
 	struct ctag *var, *nxt;
-	
+
 	for (var = RB_MIN(tagtree, &tags); var != NULL; var = nxt) {
 		nxt = RB_NEXT(tagtree, &tags, var);
 		RB_REMOVE(tagtree, &tags, var);
@@ -207,11 +161,10 @@ unloadtags(void)
 }
 
 /*
- * Lookup tag passed in tree and if found, push current location and 
+ * Lookup tag passed in tree and if found, push current location and
  * buffername onto stack, load the file with tag definition into a new
  * buffer and position dot at the pattern.
  */
-/*ARGSUSED */
 int
 pushtag(char *tok)
 {
@@ -219,10 +172,10 @@ pushtag(char *tok)
 	struct tagpos *s;
 	char bname[NFILEN];
 	int doto, dotline;
-	
+
 	if ((res = searchtag(tok)) == NULL)
 		return (FALSE);
-		
+
 	doto = curwp->w_doto;
 	dotline = curwp->w_dotline;
 	/* record absolute filenames. Fixes issues when mg's cwd is not the
@@ -237,11 +190,11 @@ pushtag(char *tok)
 		dobeep();
 		ewprintf("filename too long");
 		return (FALSE);
-	}	
+	}
 
 	if (loadbuffer(res->fname) == FALSE)
 		return (FALSE);
-	
+
 	if (searchpat(res->pat) == TRUE) {
 		if ((s = malloc(sizeof(struct tagpos))) == NULL) {
 			dobeep();
@@ -270,13 +223,12 @@ pushtag(char *tok)
 /*
  * If tag stack is not empty pop stack and jump to recorded buffer, dot.
  */
-/* ARGSUSED */
 int
 poptag(int f, int n)
 {
 	struct line *dotp;
 	struct tagpos *s;
-	
+
 	if (SLIST_EMPTY(&shead)) {
 		dobeep();
 		ewprintf("No previous location for find-tag invocation");
@@ -284,19 +236,22 @@ poptag(int f, int n)
 	}
 	s = SLIST_FIRST(&shead);
 	SLIST_REMOVE_HEAD(&shead, entry);
-	if (loadbuffer(s->bname) == FALSE)
+	if (loadbuffer(s->bname) == FALSE) {
+		free(s->bname);
+		free(s);
 		return (FALSE);
+	}
 	curwp->w_dotline = s->dotline;
 	curwp->w_doto = s->doto;
-	
+
 	/* storing of dotp in tagpos wouldn't work out in cases when
 	 * that buffer is killed by user(dangling pointer). Explicitly
-	 * traverse till dotline for correct handling. 
+	 * traverse till dotline for correct handling.
 	 */
 	dotp = curwp->w_bufp->b_headp;
 	while (s->dotline--)
 		dotp = dotp->l_fp;
-	
+
 	curwp->w_dotp = dotp;
 	free(s->bname);
 	free(s);
@@ -304,18 +259,31 @@ poptag(int f, int n)
 }
 
 /*
- * Parse the tags file and construct the tags tree. Remove escape 
+ * Parse the tags file and construct the tags tree. Remove escape
  * characters while parsing the file.
  */
 int
 loadtags(const char *fn)
 {
+	struct stat sb;
 	char *l;
 	FILE *fd;
-	
+
 	if ((fd = fopen(fn, "r")) == NULL) {
 		dobeep();
 		ewprintf("Unable to open tags file: %s", fn);
+		return (FALSE);
+	}
+	if (fstat(fileno(fd), &sb) == -1) {
+		dobeep();
+		ewprintf("fstat: %s", strerror(errno));
+		fclose(fd);
+		return (FALSE);
+	}
+	if (!S_ISREG(sb.st_mode)) {
+		dobeep();
+		ewprintf("Not a regular file");
+		fclose(fd);
 		return (FALSE);
 	}
 	while ((l = fparseln(fd, NULL, NULL, "\\\\\0",
@@ -335,8 +303,8 @@ loadtags(const char *fn)
 void
 closetags(void)
 {
-	struct tagpos *s;	
-	
+	struct tagpos *s;
+
 	while (!SLIST_EMPTY(&shead)) {
 		s = SLIST_FIRST(&shead);
 		SLIST_REMOVE_HEAD(&shead, entry);
@@ -344,30 +312,29 @@ closetags(void)
 		free(s);
 	}
 	unloadtags();
-	free(tagsfn);
 }
 
 /*
  * Strip away any special characters in pattern.
  * The pattern in ctags isn't a true regular expression. Its of the form
- * /^xxx$/ or ?^xxx$? and in some cases the "$" would be missing. Strip 
+ * /^xxx$/ or ?^xxx$? and in some cases the "$" would be missing. Strip
  * the leading and trailing special characters so the pattern matching
- * would be a simple string compare. Escape character is taken care by 
+ * would be a simple string compare. Escape character is taken care by
  * fparseln.
  */
 char *
 strip(char *s, size_t len)
 {
-	/* first strip trailing special chars */	
+	/* first strip trailing special chars */
 	s[len - 1] = '\0';
 	if (s[len - 2] == '$')
 		s[len - 2] = '\0';
-	
+
 	/* then strip leading special chars */
 	s++;
 	if (*s == '^')
 		s++;
-	
+
 	return s;
 }
 
@@ -377,17 +344,18 @@ strip(char *s, size_t len)
  * l, and can be freed during cleanup.
  */
 int
-addctag(char *l)
+addctag(char *s)
 {
-	struct ctag *t;
-	
+	struct ctag *t = NULL;
+	char *l;
+
 	if ((t = malloc(sizeof(struct ctag))) == NULL) {
 		dobeep();
 		ewprintf("Out of memory");
-		return (FALSE);
+		goto cleanup;
 	}
-	t->tag = l;
-	if ((l = strchr(l, '\t')) == NULL)
+	t->tag = s;
+	if ((l = strchr(s, '\t')) == NULL)
 		goto cleanup;
 	*l++ = '\0';
 	t->fname = l;
@@ -397,11 +365,14 @@ addctag(char *l)
 	if (*l == '\0')
 		goto cleanup;
 	t->pat = strip(l, strlen(l));
-	RB_INSERT(tagtree, &tags, t);
+	if (RB_INSERT(tagtree, &tags, t) != NULL) {
+		free(t);
+		free(s);
+	}
 	return (TRUE);
 cleanup:
 	free(t);
-	free(l);
+	free(s);
 	return (FALSE);
 }
 
@@ -434,7 +405,7 @@ searchpat(char *s_pat)
 }
 
 /*
- * Return TRUE if dot is at beginning of a word or at beginning 
+ * Return TRUE if dot is at beginning of a word or at beginning
  * of line, else FALSE.
  */
 int
@@ -457,7 +428,7 @@ curtoken(int f, int n, char *token)
 	struct line *odotp;
 	int odoto, tdoto, odotline, size, r;
 	char c;
-	
+
 	/* Underscore character is to be treated as "inword" while
 	 * processing tokens unlike mg's default word traversal. Save
 	 * and restore its cinfo value so that tag matching works for
@@ -465,38 +436,38 @@ curtoken(int f, int n, char *token)
 	 */
 	c = cinfo['_'];
 	cinfo['_'] = _MG_W;
-	
+
 	odotp = curwp->w_dotp;
 	odoto = curwp->w_doto;
 	odotline = curwp->w_dotline;
-	
+
 	/* Move backward unless we are at the beginning of a word or at
 	 * beginning of line.
 	 */
 	if (!atbow())
 		if ((r = backword(f, n)) == FALSE)
 			goto cleanup;
-		
+
 	tdoto = curwp->w_doto;
 
 	if ((r = forwword(f, n)) == FALSE)
 		goto cleanup;
-	
+
 	/* strip away leading whitespace if any like emacs. */
-	while (ltext(curwp->w_dotp) && 
+	while (ltext(curwp->w_dotp) &&
 	    isspace(lgetc(curwp->w_dotp, tdoto)))
 		tdoto++;
 
 	size = curwp->w_doto - tdoto;
-	if (size <= 0 || size >= MAX_TOKEN || 
+	if (size <= 0 || size >= MAX_TOKEN ||
 	    ltext(curwp->w_dotp) == NULL) {
 		r = FALSE;
 		goto cleanup;
-	}    
+	}
 	strncpy(token, ltext(curwp->w_dotp) + tdoto, size);
 	token[size] = '\0';
 	r = TRUE;
-	
+
 cleanup:
 	cinfo['_'] = c;
 	curwp->w_dotp = odotp;
@@ -526,7 +497,7 @@ searchtag(char *tok)
  * This is equivalent to filevisit from file.c.
  * Look around to see if we can find the file in another buffer; if we
  * can't find it, create a new buffer, read in the text, and switch to
- * the new buffer. *scratch*, *grep*, *compile* needs to be handled 
+ * the new buffer. *scratch*, *grep*, *compile* needs to be handled
  * differently from other buffers which have "filenames".
  */
 int
@@ -543,7 +514,7 @@ loadbuffer(char *bname)
 		} else {
 			return (FALSE);
 		}
-	} else {	
+	} else {
 		if ((adjf = adjustname(bname, TRUE)) == NULL)
 			return (FALSE);
 		if ((bufp = findbuffer(adjf)) == NULL)
