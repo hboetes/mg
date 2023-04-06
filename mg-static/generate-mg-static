@@ -33,7 +33,7 @@ case $1 in
         ext=$1
         ;;
     arm64v8)
-        ext=41
+        ext=$1
         ;;
     arm32v7)
         ext=$1
