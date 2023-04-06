@@ -1,4 +1,3 @@
-/*	$OpenBSD: main.c,v 1.90 2021/05/03 12:18:43 lum Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -316,7 +315,6 @@ pty_init(void)
  * Quit command.  If an argument, always quit.  Otherwise confirm if a buffer
  * has been changed and not written out.  Normally bound to "C-x C-c".
  */
-/* ARGSUSED */
 int
 quit(int f, int n)
 {
@@ -339,7 +337,6 @@ quit(int f, int n)
  * User abort.  Should be called by any input routine that sees a C-g to abort
  * whatever C-g is aborting these days. Currently does nothing.
  */
-/* ARGSUSED */
 int
 ctrlg(int f, int n)
 {
