@@ -35,7 +35,6 @@
 /help.c/1.37/Thu Apr  6 02:42:33 2023//
 /kbd.c/1.37/Thu Apr  6 02:42:33 2023//
 /macro.c/1.18/Thu Apr  6 02:42:33 2023//
-/main.c/1.94/Result of merge//
 /mg.1/1.128/Thu Apr  6 02:42:33 2023//
 /paragraph.c/1.47/Thu Apr  6 02:42:33 2023//
 /re_search.c/1.37/Result of merge//
@@ -51,4 +50,5 @@
 /window.c/1.37/Thu Apr  6 02:42:33 2023//
 /word.c/1.21/Thu Apr  6 02:42:33 2023//
 /yank.c/1.16/Thu Apr  6 02:42:33 2023//
+/main.c/1.95/Result of merge//
 D
