@@ -1,4 +1,4 @@
-/*	$OpenBSD: basic.c,v 1.52 2023/03/08 04:43:11 guenther Exp $	*/
+/*	$OpenBSD: basic.c,v 1.54 2023/04/21 13:39:36 op Exp $	*/
 
 /* This file is in the public domain */
 
@@ -274,16 +274,10 @@ getgoal(struct line *dlp)
 	int c, i, col = 0;
 	char tmp[5];
 
-
 	for (i = 0; i < llength(dlp); i++) {
 		c = lgetc(dlp, i);
-		if (c == '\t'
-#ifdef	NOTAB
-		    && !(curbp->b_flag & BFNOTAB)
-#endif
-			) {
-			col |= 0x07;
-			col++;
+		if (c == '\t') {
+			col = ntabstop(col, curbp->b_tabw);
 		} else if (ISCTRL(c) != FALSE) {
 			col += 2;
 		} else if (isprint(c))
