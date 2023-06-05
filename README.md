@@ -50,6 +50,20 @@ sudo make install
 
 *Kudos to Leonid Bobrov(@mazocomp) for adding CMAKE support.*
 
+## USING MESON
+
+You can also build mg using meson:
+
+ - Get the libbsd and libncurses dev packages installed.
+ - Run the following commands:
+
+```
+meson setup build
+meson compile -C build
+sudo meson install -C build
+```
+
+
 ## STATIC BUILDS (on Linux)
 
 I recently figured out how to make really portable static builds: On an
