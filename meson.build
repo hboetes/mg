@@ -5,8 +5,8 @@
 
 project(
   'mg', 'c',
-  version: run_command('git', 'describe', '--tags').stdout().strip(),
-  default_options: ['warning_level=1']
+  version: run_command('git', 'describe', '--tags', check: true).stdout().strip(),
+  default_options: ['warning_level=1'],
 )
 
 bsdlib_dep  = dependency('libbsd-overlay')
@@ -28,7 +28,7 @@ executable(
   'funmap.c', 'interpreter.c', 'keymap.c', 'match.c', 'modes.c',
   'paragraph.c', 'util.c',
   install: true,
-  dependencies: [bsdlib_dep, ncurses_dep]
+  dependencies: [bsdlib_dep, ncurses_dep],
 )
 
 install_man('mg.1')
