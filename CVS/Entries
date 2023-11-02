@@ -35,7 +35,6 @@
 /window.c/1.37/Thu Apr  6 02:42:33 2023//
 /word.c/1.21/Thu Apr  6 02:42:33 2023//
 /yank.c/1.16/Thu Apr  6 02:42:33 2023//
-/main.c/1.95/Result of merge//
 /basic.c/1.54/Mon May  1 15:14:05 2023//
 /buffer.c/1.114/Mon May  1 15:14:05 2023//
 /cmode.c/1.22/Mon May  1 15:14:05 2023//
@@ -49,6 +48,7 @@
 /modes.c/1.22/Mon May  1 15:14:06 2023//
 /paragraph.c/1.49/Mon May  1 15:14:06 2023//
 /util.c/1.50/Mon May  1 15:14:06 2023//
-/mg.1/1.135/Fri Jul 21 10:22:53 2023//
 /fileio.c/1.112/Result of merge+Wed Aug 16 17:46:58 2023//
+/mg.1/1.136/Tue Oct 17 23:05:45 2023//
+/main.c/1.96/Result of merge//
 D
