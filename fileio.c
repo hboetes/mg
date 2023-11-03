@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/param.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -33,6 +34,10 @@
 
 #ifndef DEFFILEMODE
 #define DEFFILEMODE 0666
+#endif
+
+#if !defined(DEFFILEMODE)
+# define DEFFILEMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)/* 0666*/
 #endif
 
 static char *bkuplocation(const char *);
