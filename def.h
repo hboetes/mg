@@ -789,6 +789,10 @@ extern int		 tcinsl;
 extern int		 tcdell;
 extern int		 rptcount;	/* successive invocation count */
 
+long long strtonum(const char *nptr, long long minval, long long maxval,
+                   const char **errstr);
+
+
 /* https://github.com/hboetes/mg/issues/7#issuecomment-475869095 */
 #if defined(__APPLE__) || defined(__NetBSD__)
 #define st_atim st_atimespec
