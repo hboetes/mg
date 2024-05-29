@@ -36,8 +36,6 @@
 /yank.c/1.16/Thu Apr  6 02:42:33 2023//
 /basic.c/1.54/Mon May  1 15:14:05 2023//
 /buffer.c/1.114/Mon May  1 15:14:05 2023//
-/cmode.c/1.22/Mon May  1 15:14:05 2023//
-/def.h/1.180/Result of merge//
 /display.c/1.52/Mon May  1 15:14:06 2023//
 /extend.c/1.80/Result of merge//
 /funmap.c/1.67/Mon May  1 15:14:06 2023//
@@ -51,4 +49,6 @@
 /mg.1/1.136/Tue Oct 17 23:05:45 2023//
 /main.c/1.96/Result of merge//
 /file.c/1.104/Fri Apr 26 17:43:07 2024//
+/cmode.c/1.23/Wed May 29 19:57:58 2024//
+/def.h/1.181/Result of merge//
 D
