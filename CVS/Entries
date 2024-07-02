@@ -17,7 +17,6 @@
 /bell.c/1.7/Thu Apr  6 02:42:32 2023//
 /cscope.c/1.22/Thu Apr  6 02:42:33 2023//
 /dir.c/1.33/Thu Apr  6 02:42:33 2023//
-/dired.c/1.102/Result of merge//
 /grep.c/1.50/Thu Apr  6 02:42:33 2023//
 /help.c/1.37/Thu Apr  6 02:42:33 2023//
 /kbd.c/1.37/Thu Apr  6 02:42:33 2023//
@@ -26,7 +25,6 @@
 /region.c/1.44/Result of merge//
 /search.c/1.50/Thu Apr  6 02:42:33 2023//
 /spawn.c/1.13/Thu Apr  6 02:42:33 2023//
-/tags.c/1.27/Result of merge//
 /tty.c/1.40/Thu Apr  6 02:42:33 2023//
 /ttykbd.c/1.22/Thu Apr  6 02:42:33 2023//
 /undo.c/1.59/Result of merge//
@@ -46,9 +44,11 @@
 /paragraph.c/1.49/Mon May  1 15:14:06 2023//
 /util.c/1.50/Mon May  1 15:14:06 2023//
 /fileio.c/1.112/Result of merge+Wed Aug 16 17:46:58 2023//
-/mg.1/1.136/Tue Oct 17 23:05:45 2023//
 /main.c/1.96/Result of merge//
 /file.c/1.104/Fri Apr 26 17:43:07 2024//
 /cmode.c/1.23/Wed May 29 19:57:58 2024//
 /def.h/1.181/Result of merge//
+/dired.c/1.104/Result of merge//
+/mg.1/1.137/Tue Jul  2 13:50:33 2024//
+/tags.c/1.28/Result of merge//
 D
