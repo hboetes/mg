@@ -36,7 +36,6 @@
 /display.c/1.52/Mon May  1 15:14:06 2023//
 /extend.c/1.80/Result of merge//
 /funmap.c/1.67/Mon May  1 15:14:06 2023//
-/interpreter.c/1.35/Result of merge//
 /keymap.c/1.61/Mon May  1 15:14:06 2023//
 /match.c/1.25/Mon May  1 15:14:06 2023//
 /modes.c/1.22/Mon May  1 15:14:06 2023//
@@ -51,4 +50,5 @@
 /util.c/1.51/Tue Jul  9 15:25:51 2024//
 /region.c/1.45/Result of merge//
 /mg.1/1.139/Sun Jul 28 21:01:32 2024//
+/interpreter.c/1.36/Result of merge//
 D
