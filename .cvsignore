@@ -1,7 +1,9 @@
-README.md
-util.h
+build
+mg-static
+meson.build
+CMakeLists.txt
 .cvsignore
 .gitignore
 .mg
 GNUmakefile
-packages
+README.md
