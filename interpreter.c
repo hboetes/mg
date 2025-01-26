@@ -18,7 +18,7 @@
  *
  * If you do want to do some testing, you can add some lines to your .mg file
  * like:
- * 
+ *
  * 1. Give multiple arguments to a function that usually would accept only one:
  * (find-file "a.txt" "b.txt" "c.txt")
  *
@@ -42,7 +42,7 @@
  * 7. oh so many things....
  * [...]
  * n. implement user definable functions.
- * 
+ *
  * Notes:
  * - Currently calls to excline() from this file have the line length and
  *   line number set to zero.
@@ -98,13 +98,13 @@ struct expentry {
 };
 
 /*
- * Structure for scheme keywords. 
+ * Structure for scheme keywords.
  */
 #define NUMSCHKEYS	4
 #define MAXLENSCHKEYS	17	/* 17 = longest keyword (16)  + 1 */
 
 char scharkey[NUMSCHKEYS][MAXLENSCHKEYS] =
-	{ 
+	{
 		"define",
 	  	"list",
 	  	"if",
@@ -304,7 +304,7 @@ parse(char *begp, const char *par1, const char *par2, int blkid, int expctr,
 	if (doregex(regs, begp))
 		return(exitinterpreter(NULL, NULL, FALSE));
 
-	/* mg function name regex */	
+	/* mg function name regex */
 	regs = "^[A-Za-z-]+$";
         if (doregex(regs, begp))
 		return(excline(begp, 0, 0));
@@ -467,7 +467,7 @@ multiarg(char *cmdp, char *argbuf, int numparams)
 		if (*p != ' ') {
 			if (*p == '"') {
 				if (inquote == 1)
-					inquote = 0;	
+					inquote = 0;
 				else
 					inquote = 1;
 			}
@@ -614,7 +614,7 @@ founddef(char *defstr, int blkid, int expctr, int hasval, int elen)
 		expandvals(NULL, valp, defnam);
 		defnam = NULL;
 	}
-	*vendp = ' ';	
+	*vendp = ' ';
 	return (TRUE);
 }
 
@@ -622,7 +622,7 @@ founddef(char *defstr, int blkid, int expctr, int hasval, int elen)
 static int
 expandvals(char *cmdp, char *valp, char *bp)
 {
-	char	 excbuf[BUFSIZE], argbuf[BUFSIZE];
+	char	 argbuf[BUFSIZE];
 	char	 contbuf[BUFSIZE], varbuf[BUFSIZE];
 	char	*argp, *endp, *p, *v, *s = " ";
 	char	*regs;
@@ -645,7 +645,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 		if (*p != ' ') {
 			if (*p == '"') {
 				if (inquote == 1)
-					inquote = 0;	
+					inquote = 0;
 				else
 					inquote = 1;
 			}
@@ -658,12 +658,11 @@ expandvals(char *cmdp, char *valp, char *bp)
 				continue;
 			/* terminate arg string */
 			if (*p == ' ') {
-				*p = '\0';		
+				*p = '\0';
 			}
 			endp = p + 1;
-			excbuf[0] = '\0';
 			varbuf[0] = '\0';
-			contbuf[0] = '\0';			
+			contbuf[0] = '\0';
 			sizof = sizeof(varbuf);
 			v = varbuf;
 			regs = "[\"]+.*[\"]+";
@@ -680,7 +679,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 
 				(void)(strlcat(varbuf, contbuf,
 				    sizof) >= sizof);
-				
+
 				argbuf[0] = ' ';
 				argbuf[1] = '\0';
 				(void)(strlcat(argbuf, varbuf,
@@ -709,7 +708,7 @@ expandvals(char *cmdp, char *valp, char *bp)
 				return (dobeep_msg("strlcat error"));
 			}
 /*			v1->v_count++;*/
-			
+
 			if (fin)
 				break;
 
@@ -894,7 +893,7 @@ getenvironmentvariable(char *ptr, char *dobuf, int dosiz)
 		return (dobeep_msg("strlcat error"));
 	if (strlcat(dobuf, q, dosiz) >= dosiz)
 		return (dobeep_msg("strlcat error"));
-		
+
 	return (TRUE);
 }
 
@@ -932,14 +931,14 @@ stringappend(char *ptr, char *dobuf, int dosiz)
 				v = v + 1;
 			}
 			if (strlcat(f, v, sizof) >= sizof)
-				return (dobeep_msg("strlcat error"));		
+				return (dobeep_msg("strlcat error"));
 		} else {
 			if (p[0] == '"' && p[strlen(p) - 1] == '"' ) {
 				p[strlen(p) - 1] = '\0';
 				p = p + 1;
 			}
 			if (strlcat(f, p, sizof) >= sizof)
-				return (dobeep_msg("strlcat error"));		
+				return (dobeep_msg("strlcat error"));
 		}
 		if (fin)
 			break;

@@ -126,7 +126,7 @@ static int
 showall(struct buffer *bp, KEYMAP *map, char *prefix)
 {
 	KEYMAP	*newmap;
-	char	 buf[80], keybuf[16];
+	char	 buf[80], keybuf[84];
 	PF	 fun;
 	int	 c;
 
