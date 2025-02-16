@@ -24,22 +24,19 @@ patches, that do not break stuff for other platforms.
 
 So, basic instructions for building mg:
 
- - Get the libbsd and libncurses dev packages installed.
- - Run the following commands:
+ - Install the `libbsd` and `libncurses` dev packages.
+ - Choose one of the following methods:
 
-```
+### USING MAKE
+
+```bash
 make
 sudo make install
 ```
 
-## USING CMAKE
+### USING CMAKE
 
-You can also build mg with cmake, it goes like this:
-
- - Get the libbsd and libncurses dev packages installed.
- - Run the following commands:
-
-```
+```bash
 mkdir build
 cd build
 cmake ..
@@ -49,14 +46,9 @@ sudo make install
 
 *Kudos to Leonid Bobrov(@mazocomp) for adding CMAKE support.*
 
-## USING MESON
+### USING MESON
 
-You can also build mg using meson:
-
- - Get the libbsd and libncurses dev packages installed.
- - Run the following commands:
-
-```
+```bash
 meson setup build
 meson compile -C build
 sudo meson install -C build
@@ -68,7 +60,7 @@ sudo meson install -C build
 I recently figured out how to make really portable static builds: On an alpine
 linux system, build with the command:
 
-```
+```bash
 make STATIC=yesplease
 ```
 
@@ -79,14 +71,21 @@ To make building static binaries more easy, check the mg-static directory, there
 is a script which can build static binaries with support of podman and buildah.
 
 
-## USING CVS
+## THE ORIGINAL CODE FROM CVS
 
 This code is the cvs checkout from the OpenBSD project, so if you install cvs
 you can see the changes I made to make mg portable; Like this:
 
-```
+```bash
 CVS_RSH=ssh cvs diff -uw
 ```
+
+### OUT OF SYNC
+
+If you noticed portable mg is not in sync with the upstream release,
+for example by running `CVS_RSH=ssh cvs -q up -PAd`, feel free to open
+an issue, and I'll update it ASAP.
+
 
 ## FEATURE REQUESTS
 
@@ -97,8 +96,3 @@ OpenBSD mg repository:
 
 So your best course of action is to send them a feature request, or even better,
 send them a patch.
-
-## OUT OF SYNC
-
-If you noticed portable mg is not in sync with the upstream release, feel free
-to drop me a note and I'll update it ASAP.
