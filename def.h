@@ -794,3 +794,12 @@ extern int		 rptcount;	/* successive invocation count */
 #define st_ctim st_ctimespec
 #define st_mtim st_mtimespec
 #endif
+
+/* Some systems (GNU/Hurd, kFreeBSD) do not define PATH_MAX and LOGIN_NAME_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096   /* safe fallback */
+#endif
+
+#ifndef LOGIN_NAME_MAX
+#define LOGIN_NAME_MAX 256 /* safe fallback */
+#endif
