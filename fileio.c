@@ -303,9 +303,11 @@ fbackupfile(const char *fn)
 char *
 adjustname(const char *fn, int slashslash)
 {
-	static char	 fnb[PATH_MAX];
+	static char	*fnb = NULL;
 	const char	*cp, *ep = NULL;
 	char		*path;
+
+	free(fnb);
 
 	if (slashslash == TRUE) {
 		cp = fn + strlen(fn) - 1;
@@ -323,8 +325,11 @@ adjustname(const char *fn, int slashslash)
 	if ((path = expandtilde(fn)) == NULL)
 		return (NULL);
 
-	if (realpath(path, fnb) == NULL)
-		(void)strlcpy(fnb, path, sizeof(fnb));
+	if ((fnb = realpath(path, NULL)) == NULL) {
+		int len = strlen(path) + 1;
+		if ((fnb = malloc(len)) != NULL)
+			(void)strlcpy(fnb, path, len);
+	}
 
 	free(path);
 	return (fnb);
@@ -713,7 +718,7 @@ expandtilde(const char *fn)
 	struct passwd	*pw;
 	struct stat	 statbuf;
 	const char	*cp;
-	char		 user[LOGIN_NAME_MAX], path[NFILEN];
+	char		 path[NFILEN];
 	char		*ret;
 	size_t		 ulen, plen;
 
@@ -728,17 +733,16 @@ expandtilde(const char *fn)
 	if (cp == NULL)
 		cp = fn + strlen(fn); /* point to the NUL byte */
 	ulen = cp - &fn[1];
-	if (ulen >= sizeof(user)) {
-		if ((ret = strndup(fn, NFILEN)) == NULL)
-			return (NULL);
-		return(ret);
-	}
 	if (ulen == 0) /* ~/ or ~ */
 		pw = getpwuid(geteuid());
 	else { /* ~user/ or ~user */
+		char *user;
+		if ((user = malloc(ulen + 1)) == NULL)
+			return (NULL);
 		memcpy(user, &fn[1], ulen);
 		user[ulen] = '\0';
 		pw = getpwnam(user);
+		free(user);
 	}
 	if (pw != NULL) {
 		plen = strlcpy(path, pw->pw_dir, sizeof(path));

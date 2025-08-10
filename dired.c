@@ -43,7 +43,7 @@ static int	 d_rename(int, int);
 static int	 d_exec(int, struct buffer *, const char *, const char *, ...);
 static int	 d_shell_command(int, int);
 static int	 d_create_directory(int, int);
-static int	 d_makename(struct line *, char *, size_t);
+static int	 d_makename(struct line *, char **);
 static int	 d_warpdot(struct line *, int *);
 static int	 d_forwpage(int, int);
 static int	 d_backpage(int, int);
@@ -354,22 +354,30 @@ d_findfile(int f, int n)
 {
 	struct buffer	*bp;
 	int		 s;
-	char		 fname[NFILEN];
+	char		*fname;
 
-	if ((s = d_makename(curwp->w_dotp, fname, sizeof(fname))) == ABORT)
+	if ((s = d_makename(curwp->w_dotp, &fname)) == ABORT)
 		return (FALSE);
 	if (s == TRUE)
 		bp = dired_(fname);
 	else
 		bp = findbuffer(fname);
-	if (bp == NULL)
+	if (bp == NULL) {
+		free(fname);
 		return (FALSE);
+	}
 	curbp = bp;
-	if (showbuffer(bp, curwp, WFFULL) != TRUE)
+	if (showbuffer(bp, curwp, WFFULL) != TRUE) {
+		free(fname);
 		return (FALSE);
-	if (bp->b_fname[0] != 0)
+	}
+	if (bp->b_fname[0] != 0) {
+		free(fname);
 		return (TRUE);
-	return (readin(fname));
+	}
+	s = readin(fname);
+	free(fname);
+	return (s);
 }
 
 int
@@ -397,29 +405,37 @@ d_updirectory(int f, int n)
 int
 d_ffotherwindow(int f, int n)
 {
-	char		 fname[NFILEN];
+	char		*fname;
 	int		 s;
 	struct buffer	*bp;
 	struct mgwin	*wp;
 
-	if ((s = d_makename(curwp->w_dotp, fname, sizeof(fname))) == ABORT)
+	if ((s = d_makename(curwp->w_dotp, &fname)) == ABORT)
 		return (FALSE);
-	if ((bp = (s ? dired_(fname) : findbuffer(fname))) == NULL)
+	if ((bp = (s ? dired_(fname) : findbuffer(fname))) == NULL) {
+		free(fname);
 		return (FALSE);
-	if ((wp = popbuf(bp, WNONE)) == NULL)
+	}
+	if ((wp = popbuf(bp, WNONE)) == NULL) {
+		free(fname);
 		return (FALSE);
+	}
 	curbp = bp;
 	curwp = wp;
-	if (bp->b_fname[0] != 0)
+	if (bp->b_fname[0] != 0) {
+		free(fname);
 		return (TRUE);	/* never true for dired buffers */
-	return (readin(fname));
+	}
+	s = readin(fname);
+	free(fname);
+	return (s);
 }
 
 int
 d_expunge(int f, int n)
 {
 	struct line	*lp, *nlp;
-	char		 fname[NFILEN], sname[NFILEN];
+	char		*fname, sname[NFILEN];
 	int		 tmp;
 
 	tmp = curwp->w_dotline;
@@ -429,7 +445,7 @@ d_expunge(int f, int n)
 		curwp->w_dotline++;
 		nlp = lforw(lp);
 		if (llength(lp) && lgetc(lp, 0) == 'D') {
-			switch (d_makename(lp, fname, sizeof(fname))) {
+			switch (d_makename(lp, &fname)) {
 			case ABORT:
 				dobeep();
 				ewprintf("Bad line in dired buffer");
@@ -441,6 +457,7 @@ d_expunge(int f, int n)
 					dobeep();
 					ewprintf("Could not delete '%s'", sname);
 					curwp->w_dotline = tmp;
+					free(fname);
 					return (FALSE);
 				}
 				break;
@@ -451,6 +468,7 @@ d_expunge(int f, int n)
 					ewprintf("Could not delete directory "
 					    "'%s'", sname);
 					curwp->w_dotline = tmp;
+					free(fname);
 					return (FALSE);
 				}
 				break;
@@ -475,15 +493,18 @@ int
 d_copy(int f, int n)
 {
 	struct stat      statbuf;
-	char		 frname[NFILEN], toname[NFILEN], sname[NFILEN];
+	char		*frname, toname[NFILEN], sname[NFILEN];
 	char		*topath, *bufp;
 	int		 ret;
 	size_t		 off;
 	struct buffer	*bp;
 
-	if (d_makename(curwp->w_dotp, frname, sizeof(frname)) != FALSE) {
+	ret = d_makename(curwp->w_dotp, &frname);
+	if (ret != FALSE) {
 		dobeep();
 		ewprintf("Not a file");
+		if (ret != ABORT)
+			free(frname);
 		return (FALSE);
 	}
 	off = strlcpy(toname, curbp->b_fname, sizeof(toname));
@@ -533,16 +554,19 @@ int
 d_rename(int f, int n)
 {
 	struct stat      statbuf;
-	char		 frname[NFILEN], toname[NFILEN];
+	char		*frname, toname[NFILEN];
 	char		*topath, *bufp;
 	int		 ret;
 	size_t		 off;
 	struct buffer	*bp;
 	char		 sname[NFILEN];
 
-	if (d_makename(curwp->w_dotp, frname, sizeof(frname)) != FALSE) {
+	ret = d_makename(curwp->w_dotp, &frname);
+	if (ret != FALSE) {
 		dobeep();
 		ewprintf("Not a file");
+		if (ret != ABORT)
+			free(frname);
 		return (FALSE);
 	}
 	off = strlcpy(toname, curbp->b_fname, sizeof(toname));
@@ -604,18 +628,22 @@ reaper(int signo __attribute__((unused)))
 int
 d_shell_command(int f, int n)
 {
-	char		 command[512], fname[PATH_MAX], *bufp;
+	char		 command[512], *fname, *bufp;
 	struct buffer	*bp;
 	struct mgwin	*wp;
 	char		 sname[NFILEN];
+	int		 ret;
 
 	bp = bfind("*Shell Command Output*", TRUE);
 	if (bclear(bp) != TRUE)
 		return (ABORT);
 
-	if (d_makename(curwp->w_dotp, fname, sizeof(fname)) != FALSE) {
+	ret = d_makename(curwp->w_dotp, &fname);
+	if (ret != FALSE) {
 		dobeep();
 		ewprintf("bad line");
+		if (ret != ABORT)
+			free(fname);
 		return (ABORT);
 	}
 
@@ -836,19 +864,20 @@ refreshbuffer(struct buffer *bp)
 }
 
 static int
-d_makename(struct line *lp, char *fn, size_t len)
+d_makename(struct line *lp, char **fn)
 {
 	int	 start, nlen, ret;
-	char	*namep;
+	char	*namep, *tmp;
 
 	if (d_warpdot(lp, &start) == FALSE)
 		return (ABORT);
 	namep = &lp->l_text[start];
 	nlen = llength(lp) - start;
 
-	ret = snprintf(fn, len, "%s%.*s", curbp->b_fname, nlen, namep);
-	if (ret < 0 || ret >= (int)len)
+	ret = asprintf(&tmp, "%s%.*s", curbp->b_fname, nlen, namep);
+	if (ret < 0)
 		return (ABORT); /* Name is too long. */
+	*fn = tmp;
 
 	/* Return TRUE if the entry is a directory. */
 	return ((lgetc(lp, 2) == 'd') ? TRUE : FALSE);
@@ -914,12 +943,15 @@ d_backline (int f, int n)
 int
 d_filevisitalt (int f, int n)
 {
-	char	 fname[NFILEN];
+	char	*fname;
+	int	 ret;
 
-	if (d_makename(curwp->w_dotp, fname, sizeof(fname)) == ABORT)
+	if (d_makename(curwp->w_dotp, &fname) == ABORT)
 		return (FALSE);
 
-	return(do_filevisitalt(fname));
+	ret = do_filevisitalt(fname);
+	free(fname);
+	return (ret);
 }
 
 /*
