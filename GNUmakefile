@@ -40,6 +40,9 @@ endif
 
 ifdef STATIC
   LDFLAGS=-static -static-libgcc
+  ifneq ($(MSYSTEM),)
+    CURSES_LIBS:= $(CURSES_LIBS).dll
+  endif
 endif
 
 CC?=		gcc
