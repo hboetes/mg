@@ -579,7 +579,7 @@ lreplace(RSIZE plen, char *st)
 
 	for (n = 0, is_replace_alllower = 1; n < rlen && is_replace_alllower;
 	    n++)
-		is_replace_alllower = !isupper((unsigned char)repl[n]);
+		is_replace_alllower = isupper((unsigned char)repl[n]);
 
 	if (is_replace_alllower) {
 		if (is_query_allcaps) {
