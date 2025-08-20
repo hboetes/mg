@@ -19,7 +19,6 @@
 /dir.c/1.33/Thu Apr  6 02:42:33 2023//
 /grep.c/1.50/Thu Apr  6 02:42:33 2023//
 /help.c/1.37/Thu Apr  6 02:42:33 2023//
-/kbd.c/1.37/Thu Apr  6 02:42:33 2023//
 /macro.c/1.18/Thu Apr  6 02:42:33 2023//
 /re_search.c/1.37/Result of merge//
 /search.c/1.50/Thu Apr  6 02:42:33 2023//
@@ -45,10 +44,11 @@
 /file.c/1.104/Fri Apr 26 17:43:07 2024//
 /cmode.c/1.23/Wed May 29 19:57:58 2024//
 /def.h/1.181/Result of merge//
-/dired.c/1.104/Result of merge//
 /tags.c/1.28/Result of merge//
 /util.c/1.51/Tue Jul  9 15:25:51 2024//
 /region.c/1.45/Result of merge//
 /mg.1/1.139/Sun Jul 28 21:01:32 2024//
 /interpreter.c/1.36/Result of merge//
+/dired.c/1.105/Result of merge//
+/kbd.c/1.37/Mon Aug 18 05:23:11 2025//
 D
