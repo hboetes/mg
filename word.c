@@ -176,6 +176,7 @@ transposeword(int f, int n)
 		curwp->w_dotline = tmp2_w_dotline;
 		curwp->w_dotp = tmp2_w_dotp;
 
+		free(word2);
 		word2 = NULL;
 	}
 	curwp->w_doto = tmp2_w_doto;
@@ -206,14 +207,20 @@ grabword(char **word)
 	int c;
 
 	while (inword() == TRUE) {
+		char *newword;
 		c = lgetc(curwp->w_dotp, curwp->w_doto);
 		if (*word == NULL) {
-			if (asprintf(word, "%c", c) == -1)
+			if (asprintf(&newword, "%c", c) == -1)
 				return (errno);
 		} else {
-			if (asprintf(word, "%s%c", *word, c) == -1)
+			if (asprintf(&newword, "%s%c", *word, c) == -1) {
+				free(*word);
+				*word = NULL;
 				return (errno);
+			}
+			free(*word);
 		}
+		*word = newword;
 		(void)forwdel(FFRAND, 1);
 	}
 	if (*word == NULL)
