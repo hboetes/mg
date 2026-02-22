@@ -1,4 +1,4 @@
-/*      $OpenBSD: interpreter.c,v 1.36 2024/09/20 02:00:46 jsg Exp $	*/
+/*      $OpenBSD: interpreter.c,v 1.37 2026/02/22 10:31:28 op Exp $	*/
 /*
  * This file is in the public domain.
  *

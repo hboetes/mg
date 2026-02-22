@@ -11,7 +11,6 @@
 /log.h/1.6/Wed Aug 24 19:54:15 2022//
 /macro.h/1.7/Wed Aug 24 19:54:15 2022//
 /pathnames.h/1.1/Wed Aug 24 19:54:15 2022//
-/tutorial/1.19/Wed Aug 24 19:54:15 2022//
 /log.c/1.13/Sat Jan  7 09:57:22 2023//
 /autoexec.c/1.19/Thu Apr  6 02:42:32 2023//
 /bell.c/1.7/Thu Apr  6 02:42:32 2023//
@@ -48,7 +47,8 @@
 /util.c/1.51/Tue Jul  9 15:25:51 2024//
 /region.c/1.45/Result of merge//
 /mg.1/1.139/Sun Jul 28 21:01:32 2024//
-/interpreter.c/1.36/Result of merge//
 /dired.c/1.105/Result of merge//
 /kbd.c/1.37/Mon Aug 18 05:23:11 2025//
+/interpreter.c/1.37/Result of merge//
+/tutorial/1.19/Sat Feb 21 18:43:27 2026//
 D
