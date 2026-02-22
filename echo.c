@@ -1011,8 +1011,17 @@ copy_list(struct list *lp)
 			}
 			return (NULL);
 		}
-		current->l_next = last;
 		current->l_name = strdup(lp->l_name);
+		if (current->l_name == NULL) {
+			free(current);
+			for (current = last; current; current = nxt) {
+				nxt = current->l_next;
+				free(current->l_name);
+				free(current);
+			}
+			return (NULL);
+		}
+		current->l_next = last;
 		last = current;
 		lp = lp->l_next;
 	}
