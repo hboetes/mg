@@ -27,7 +27,6 @@
 /undo.c/1.59/Result of merge//
 /version.c/1.11/Result of merge//
 /window.c/1.37/Thu Apr  6 02:42:33 2023//
-/word.c/1.21/Thu Apr  6 02:42:33 2023//
 /yank.c/1.16/Thu Apr  6 02:42:33 2023//
 /basic.c/1.54/Mon May  1 15:14:05 2023//
 /buffer.c/1.114/Mon May  1 15:14:05 2023//
@@ -51,4 +50,5 @@
 /kbd.c/1.37/Mon Aug 18 05:23:11 2025//
 /interpreter.c/1.37/Result of merge//
 /tutorial/1.19/Sat Feb 21 18:43:27 2026//
+/word.c/1.23/Result of merge//
 D
