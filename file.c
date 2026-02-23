@@ -565,6 +565,11 @@ static int	makebackup = TRUE;
 int
 filesave(int f, int n)
 {
+	if ((curbp->b_flag & BFCHG) == 0) {
+		ewprintf("(No changes need to be saved)");
+		return (TRUE);
+	}
+
 	if (curbp->b_fname[0] == '\0')
 		return (filewrite(f, n));
 	else
