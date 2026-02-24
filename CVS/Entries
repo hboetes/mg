@@ -3,7 +3,6 @@
 /README/1.14/Wed Aug 24 19:54:15 2022//
 /chrdef.h/1.10/Wed Aug 24 19:54:15 2022//
 /cinfo.c/1.18/Wed Aug 24 19:54:15 2022//
-/echo.c/1.69/Sat Nov 12 10:02:34 2022//
 /funmap.h/1.8/Wed Aug 24 19:54:15 2022//
 /kbd.h/1.19/Wed Aug 24 19:54:15 2022//
 /key.h/1.6/Wed Aug 24 19:54:15 2022//
@@ -50,5 +49,6 @@
 /kbd.c/1.37/Mon Aug 18 05:23:11 2025//
 /interpreter.c/1.37/Result of merge//
 /tutorial/1.19/Sat Feb 21 18:43:27 2026//
-/word.c/1.23/Result of merge//
+/echo.c/1.70/Tue Feb 24 21:34:29 2026//
+/word.c/1.23/Tue Feb 24 21:33:15 2026//
 D
