@@ -18,7 +18,6 @@
 /grep.c/1.50/Thu Apr  6 02:42:33 2023//
 /help.c/1.37/Thu Apr  6 02:42:33 2023//
 /macro.c/1.18/Thu Apr  6 02:42:33 2023//
-/re_search.c/1.37/Result of merge//
 /search.c/1.50/Thu Apr  6 02:42:33 2023//
 /spawn.c/1.13/Thu Apr  6 02:42:33 2023//
 /tty.c/1.40/Thu Apr  6 02:42:33 2023//
@@ -51,4 +50,5 @@
 /tutorial/1.19/Sat Feb 21 18:43:27 2026//
 /word.c/1.23/Tue Feb 24 21:33:15 2026//
 /echo.c/1.70/Wed Feb 25 03:22:44 2026//
+/re_search.c/1.38/Sat Feb 28 20:44:02 2026//
 D
