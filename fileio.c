@@ -555,8 +555,14 @@ make_file_list(char *buf)
 			free(current);
 			continue;
 		}
-		current->l_next = last;
 		current->l_name = strdup(fl_name);
+		if (current->l_name == NULL) {
+			free(current);
+			free_file_list(last);
+			closedir(dirp);
+			return (NULL);
+		}
+		current->l_next = last;
 		last = current;
 	}
 	closedir(dirp);
