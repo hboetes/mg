@@ -577,8 +577,7 @@ filesave(int f, int n)
 }
 
 /*
- * Save the contents of the buffer argument into its associated file.  Do
- * nothing if there have been no changes (is this a bug, or a feature?).
+ * Save the contents of the buffer argument into its associated file.
  * Error if there is no remembered file name. If this is the first write
  * since the read or visit, then a backup copy of the file is made.
  * Allow user to select whether or not to make backup files by looking at
@@ -589,12 +588,6 @@ buffsave(struct buffer *bp)
 {
 	int	 s;
         FILE    *ffp;
-
-	/* return, no changes */
-	if ((bp->b_flag & BFCHG) == 0) {
-		ewprintf("(No changes need to be saved)");
-		return (TRUE);
-	}
 
 	/* must have a name */
 	if (bp->b_fname[0] == '\0') {
