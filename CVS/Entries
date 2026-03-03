@@ -30,12 +30,10 @@
 /buffer.c/1.114/Mon May  1 15:14:05 2023//
 /display.c/1.52/Mon May  1 15:14:06 2023//
 /extend.c/1.80/Result of merge//
-/funmap.c/1.67/Mon May  1 15:14:06 2023//
 /keymap.c/1.61/Mon May  1 15:14:06 2023//
 /match.c/1.25/Mon May  1 15:14:06 2023//
 /modes.c/1.22/Mon May  1 15:14:06 2023//
 /paragraph.c/1.49/Mon May  1 15:14:06 2023//
-/fileio.c/1.112/Result of merge+Wed Aug 16 17:46:58 2023//
 /main.c/1.96/Result of merge//
 /file.c/1.104/Fri Apr 26 17:43:07 2024//
 /cmode.c/1.23/Wed May 29 19:57:58 2024//
@@ -49,6 +47,8 @@
 /interpreter.c/1.37/Result of merge//
 /tutorial/1.19/Sat Feb 21 18:43:27 2026//
 /word.c/1.23/Tue Feb 24 21:33:15 2026//
-/echo.c/1.70/Wed Feb 25 03:22:44 2026//
-/re_search.c/1.38/Sat Feb 28 20:44:02 2026//
+/echo.c/1.70/Mon Mar  2 21:03:51 2026//
+/re_search.c/1.38/Mon Mar  2 21:03:51 2026//
+/funmap.c/1.68/Tue Mar  3 08:08:15 2026//
+/fileio.c/1.113/Tue Mar  3 08:14:02 2026//
 D
