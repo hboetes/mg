@@ -35,7 +35,6 @@
 /modes.c/1.22/Mon May  1 15:14:06 2023//
 /paragraph.c/1.49/Mon May  1 15:14:06 2023//
 /main.c/1.96/Result of merge//
-/file.c/1.104/Fri Apr 26 17:43:07 2024//
 /cmode.c/1.23/Wed May 29 19:57:58 2024//
 /def.h/1.181/Result of merge//
 /tags.c/1.28/Result of merge//
@@ -49,6 +48,7 @@
 /word.c/1.23/Tue Feb 24 21:33:15 2026//
 /echo.c/1.70/Mon Mar  2 21:03:51 2026//
 /re_search.c/1.38/Mon Mar  2 21:03:51 2026//
-/funmap.c/1.68/Tue Mar  3 08:08:15 2026//
 /fileio.c/1.113/Tue Mar  3 08:14:02 2026//
+/file.c/1.105/Result of merge//
+/funmap.c/1.68/Tue Mar  3 08:16:04 2026//
 D

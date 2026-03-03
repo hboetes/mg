@@ -1,4 +1,4 @@
-/*	$OpenBSD: file.c,v 1.104 2024/04/23 13:34:50 jsg Exp $	*/
+/*	$OpenBSD: file.c,v 1.105 2026/03/03 15:17:29 op Exp $	*/
 
 /* This file is in the public domain. */
 
