@@ -156,6 +156,7 @@ static struct funmap functnames[] = {
 	{negative_argument, "negative-argument", 1},
 	{enewline, "newline", 1},
 	{lfindent, "newline-and-indent", 1},
+	{set_require_final_newline, "require-final-newline", 1},
 	{forwline, "next-line", 1},
 	{notabmode, "no-tab-mode", 0},
 	{notmodified, "not-modified", 0},
