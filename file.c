@@ -20,6 +20,22 @@
 
 size_t xdirname(char *, const char *, size_t);
 
+/* -1 = ask (default), 0 = never add, 1 = always add silently */
+int	 require_final_newline = -1;
+
+/*
+ * Set the require-final-newline behaviour: -1 to prompt, 0 to never
+ * add a newline, 1 to always add one silently.
+ */
+int
+set_require_final_newline(int f, int n)
+{
+	if (!(f & FFARG) || n < -1 || n > 1)
+		return (FALSE);
+	require_final_newline = n;
+	return (TRUE);
+}
+
 /*
  * Insert a file into the current buffer.  Real easy - just call the
  * insertfile routine with the file name.
@@ -681,9 +697,15 @@ writeout(FILE ** ffp, struct buffer *bp, char *fn)
 	lpend = bp->b_headp;
 	eobnl = 0;
 	if (llength(lback(lpend)) != 0) {
-		eobnl = eyorn("No newline at end of file, add one");
-		if (eobnl != TRUE && eobnl != FALSE)
-			return (eobnl); /* abort */
+		if (require_final_newline == 1)
+			eobnl = TRUE;
+		else if (require_final_newline == 0)
+			eobnl = FALSE;
+		else {
+			eobnl = eyorn("No newline at end of file, add one");
+			if (eobnl != TRUE && eobnl != FALSE)
+				return (eobnl); /* abort */
+		}
 	}
 	/* open writes message */
 	if ((s = ffwopen(ffp, fn, bp)) != FIOSUC)
