@@ -30,9 +30,38 @@ int	 require_final_newline = -1;
 int
 set_require_final_newline(int f, int n)
 {
-	if (!(f & FFARG) || n < -1 || n > 1)
+	char buf[32], *response;
+	const char *es;
+	int newline_mode;
+
+
+	if ((f & FFARG) != 0) {
+		if (n < -1 || n > 1) {
+			dobeep();
+			ewprintf("Invalid mode: %d", n);
+			return (FALSE);
+		}
+		require_final_newline = n;
+		return (TRUE);
+	}
+
+	response = eread("Require final newline (-1=ask, 0=never, 1=always): ",
+	    buf, sizeof(buf), EFNEW | EFCR);
+	if (response == NULL)
+		return (ABORT);
+	else if (response[0] == '\0') {
+		dobeep();
+		ewprintf("Mode required");
 		return (FALSE);
-	require_final_newline = n;
+	}
+	newline_mode = strtonum(response, -1, 1, &es);
+	if (es != NULL) {
+		dobeep();
+		ewprintf("Invalid mode: %s", response);
+		return (FALSE);
+	}
+	/* No need to normalize here as strtonum ensures the response is within -1, 1 */
+	require_final_newline = newline_mode;
 	return (TRUE);
 }
 
@@ -619,7 +648,7 @@ buffsave(struct buffer *bp)
 		    "Save anyway")) != TRUE)
 			return (s);
 	}
-	
+
 	if (makebackup && (bp->b_flag & BFBAK)) {
 		s = fbackupfile(bp->b_fname);
 		/* hard error */
