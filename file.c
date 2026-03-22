@@ -20,6 +20,51 @@
 
 size_t xdirname(char *, const char *, size_t);
 
+/* -1 = ask (default), 0 = never add, 1 = always add silently */
+int	 require_final_newline = -1;
+
+/*
+ * Set the require-final-newline behaviour: -1 to prompt, 0 to never
+ * add a newline, 1 to always add one silently.
+ */
+int
+set_require_final_newline(int f, int n)
+{
+	char buf[32], *response;
+	const char *es;
+	int newline_mode;
+
+
+	if ((f & FFARG) != 0) {
+		if (n < -1 || n > 1) {
+			dobeep();
+			ewprintf("Invalid mode: %d", n);
+			return (FALSE);
+		}
+		require_final_newline = n;
+		return (TRUE);
+	}
+
+	response = eread("Require final newline (-1=ask, 0=never, 1=always): ",
+	    buf, sizeof(buf), EFNEW | EFCR);
+	if (response == NULL)
+		return (ABORT);
+	else if (response[0] == '\0') {
+		dobeep();
+		ewprintf("Mode required");
+		return (FALSE);
+	}
+	newline_mode = strtonum(response, -1, 1, &es);
+	if (es != NULL) {
+		dobeep();
+		ewprintf("Invalid mode: %s", response);
+		return (FALSE);
+	}
+	/* No need to normalize here as strtonum ensures the response is within -1, 1 */
+	require_final_newline = newline_mode;
+	return (TRUE);
+}
+
 /*
  * Insert a file into the current buffer.  Real easy - just call the
  * insertfile routine with the file name.
@@ -603,7 +648,7 @@ buffsave(struct buffer *bp)
 		    "Save anyway")) != TRUE)
 			return (s);
 	}
-	
+
 	if (makebackup && (bp->b_flag & BFBAK)) {
 		s = fbackupfile(bp->b_fname);
 		/* hard error */
@@ -681,9 +726,15 @@ writeout(FILE ** ffp, struct buffer *bp, char *fn)
 	lpend = bp->b_headp;
 	eobnl = 0;
 	if (llength(lback(lpend)) != 0) {
-		eobnl = eyorn("No newline at end of file, add one");
-		if (eobnl != TRUE && eobnl != FALSE)
-			return (eobnl); /* abort */
+		if (require_final_newline == 1)
+			eobnl = TRUE;
+		else if (require_final_newline == 0)
+			eobnl = FALSE;
+		else {
+			eobnl = eyorn("No newline at end of file, add one");
+			if (eobnl != TRUE && eobnl != FALSE)
+				return (eobnl); /* abort */
+		}
 	}
 	/* open writes message */
 	if ((s = ffwopen(ffp, fn, bp)) != FIOSUC)

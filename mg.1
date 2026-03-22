@@ -855,6 +855,16 @@ Refresh the display.
 Recomputes all window sizes in case something has changed.
 .It Ic revert-buffer
 Revert the current buffer to the latest file on disk.
+.It Ic require-final-newline Ar n
+Control whether a newline is added at end of file when saving.
+.Ar n
+may be
+.Cm \-1
+to prompt the user (the default),
+.Cm 0
+to never add a newline, or
+.Cm 1
+to always add one silently.
 .It Ic save-buffer
 Save the contents of the current buffer if it has been changed,
 optionally creating a backup copy.
