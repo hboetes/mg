@@ -84,7 +84,7 @@ ttinit(void)
 		/* this is what GNU Emacs does */
 		scroll_fwd = parm_down_cursor;
 		if (scroll_fwd == NULL || *scroll_fwd == '\0')
-			scroll_fwd = curbp->b_nlchr;
+			scroll_fwd = curbp ? curbp->b_nlchr : "\n";
 	}
 
 	if (cursor_address == NULL || cursor_up == NULL)
