@@ -14,6 +14,9 @@
 #include <sys/queue.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#if defined(__MSYS__)
+#include <sys/socket.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
