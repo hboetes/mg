@@ -17,10 +17,18 @@ PKG_CONFIG?=	/usr/bin/pkg-config --silence-errors
 INSTALL?=	/usr/bin/install
 STRIP?=		/usr/bin/strip
 
+OBJS=  autoexec.o basic.o bell.o buffer.o cinfo.o dir.o display.o \
+       echo.o extend.o file.o fileio.o funmap.o interpreter.o help.o \
+       kbd.o keymap.o line.o macro.o main.o match.o modes.o paragraph.o \
+       re_search.o region.o search.o spawn.o tty.o ttyio.o ttykbd.o \
+       undo.o util.o version.o window.o word.o yank.o
+OBJS+= cmode.o cscope.o dired.o grep.o tags.o
+
 UNAME:=		$(shell uname)
 ifeq ($(UNAME),FreeBSD)
-  BSD_CPPFLAGS:= -DHAVE_UTIL_H
+  BSD_CPPFLAGS:= -DHAVE_LIBUTIL_H
   BSD_LIBS:=	 -lutil
+  OBJS+=         recallocarray.o
 else ifeq ($(UNAME),NetBSD)
   BSD_CPPFLAGS:= -DHAVE_UTIL_H -D_OPENBSD_SOURCE -I/usr/pkg/include/ncurses -I/usr/pkg/include
   BSD_LIBS:=     -lutil -lbsd
@@ -52,14 +60,6 @@ CPPFLAGS=	-DREGEX
 CPPFLAGS+=	-D_GNU_SOURCE
 CPPFLAGS+=	$(BSD_CPPFLAGS)
 LIBS=		$(CURSES_LIBS) $(BSD_LIBS)
-
-
-OBJS=	autoexec.o basic.o bell.o buffer.o cinfo.o dir.o display.o \
-	echo.o extend.o file.o fileio.o funmap.o interpreter.o help.o \
-	kbd.o keymap.o line.o macro.o main.o match.o modes.o paragraph.o \
-	re_search.o region.o search.o spawn.o tty.o ttyio.o ttykbd.o \
-	undo.o util.o version.o window.o word.o yank.o
-OBJS+=	cmode.o cscope.o dired.o grep.o tags.o
 
 
 # Portability stuff.

@@ -15,6 +15,8 @@
 
 #include	"chrdef.h"
 
+#include "compat.h"
+
 #ifdef __NetBSD__
 #include <bsd/stdlib.h>
 #endif
