@@ -13,9 +13,9 @@ libdir=		$(prefix)/lib
 includedir=	$(prefix)/include
 mandir=		$(prefix)/man
 
-PKG_CONFIG=	/usr/bin/pkg-config --silence-errors
-INSTALL=	/usr/bin/install
-STRIP=		/usr/bin/strip
+PKG_CONFIG?=	/usr/bin/pkg-config --silence-errors
+INSTALL?=	/usr/bin/install
+STRIP?=		/usr/bin/strip
 
 UNAME:=		$(shell uname)
 ifeq ($(UNAME),FreeBSD)
