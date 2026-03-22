@@ -15,6 +15,10 @@
 
 #include	"chrdef.h"
 
+#ifdef __NetBSD__
+#include <bsd/stdlib.h>
+#endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__DragonFly__)
 #  define LOGIN_NAME_MAX _POSIX_LOGIN_NAME_MAX
 #endif
