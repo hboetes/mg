@@ -3,3 +3,5 @@ packages
 mg
 mg-static/mg-*
 build/
+.vagrant
+.depend
