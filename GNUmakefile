@@ -21,6 +21,9 @@ UNAME:=		$(shell uname)
 ifeq ($(UNAME),FreeBSD)
   BSD_CPPFLAGS:= -DHAVE_UTIL_H
   BSD_LIBS:=	 -lutil
+else ifeq ($(UNAME),NetBSD)
+  BSD_CPPFLAGS:= -DHAVE_UTIL_H -D_OPENBSD_SOURCE -I/usr/pkg/include/ncurses -I/usr/pkg/include
+  BSD_LIBS:=     -lutil -lbsd
 else
   BSD_CPPFLAGS:= $(shell $(PKG_CONFIG) --cflags libbsd-overlay) -DHAVE_PTY_H
   BSD_LIBS:=	 $(shell $(PKG_CONFIG) --libs libbsd-overlay) -lutil
