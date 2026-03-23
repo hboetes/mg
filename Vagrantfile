@@ -1,7 +1,6 @@
 BOXES = {
   "freebsd14" => { box: "generic/freebsd14", shell: "sh",  synced: false },
   "netbsd9"   => { box: "generic/netbsd9",   shell: "sh",  synced: false },
-  "alpine319" => { box: "generic/alpine319", shell: "sh",  synced: true  },
 }
 
 PROVISION = {
@@ -17,10 +16,6 @@ PROVISION = {
     sudo update-ca-certificates
     git clone https://github.com/hboetes/mg /home/vagrant/mg
     cd /home/vagrant/mg && gmake
-  SH
-  "alpine319" => <<~SH,
-    sudo apk add --no-cache make gcc musl-dev ncurses-dev git
-    cd /vagrant && make
   SH
 }
 
