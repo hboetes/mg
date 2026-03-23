@@ -1,54 +1,54 @@
 /Makefile/1.35/Result of merge//
 /ttyio.c/1.40/Result of merge//
-/README/1.14/Wed Aug 24 19:54:15 2022//
-/chrdef.h/1.10/Wed Aug 24 19:54:15 2022//
-/cinfo.c/1.18/Wed Aug 24 19:54:15 2022//
-/funmap.h/1.8/Wed Aug 24 19:54:15 2022//
-/kbd.h/1.19/Wed Aug 24 19:54:15 2022//
-/key.h/1.6/Wed Aug 24 19:54:15 2022//
-/line.c/1.63/Wed Aug 24 19:54:15 2022//
-/log.h/1.6/Wed Aug 24 19:54:15 2022//
-/macro.h/1.7/Wed Aug 24 19:54:15 2022//
-/pathnames.h/1.1/Wed Aug 24 19:54:15 2022//
-/log.c/1.13/Sat Jan  7 09:57:22 2023//
-/autoexec.c/1.19/Thu Apr  6 02:42:32 2023//
-/bell.c/1.7/Thu Apr  6 02:42:32 2023//
-/cscope.c/1.22/Thu Apr  6 02:42:33 2023//
-/dir.c/1.33/Thu Apr  6 02:42:33 2023//
-/grep.c/1.50/Thu Apr  6 02:42:33 2023//
 /help.c/1.37/Thu Apr  6 02:42:33 2023//
-/macro.c/1.18/Thu Apr  6 02:42:33 2023//
-/search.c/1.50/Thu Apr  6 02:42:33 2023//
-/spawn.c/1.13/Thu Apr  6 02:42:33 2023//
 /tty.c/1.40/Thu Apr  6 02:42:33 2023//
-/ttykbd.c/1.22/Thu Apr  6 02:42:33 2023//
 /undo.c/1.59/Result of merge//
 /version.c/1.11/Result of merge//
-/window.c/1.37/Thu Apr  6 02:42:33 2023//
-/yank.c/1.16/Thu Apr  6 02:42:33 2023//
-/basic.c/1.54/Mon May  1 15:14:05 2023//
-/buffer.c/1.114/Mon May  1 15:14:05 2023//
-/display.c/1.52/Mon May  1 15:14:06 2023//
 /extend.c/1.80/Result of merge//
-/keymap.c/1.61/Mon May  1 15:14:06 2023//
-/match.c/1.25/Mon May  1 15:14:06 2023//
-/modes.c/1.22/Mon May  1 15:14:06 2023//
-/paragraph.c/1.49/Mon May  1 15:14:06 2023//
 /main.c/1.96/Result of merge//
-/cmode.c/1.23/Wed May 29 19:57:58 2024//
 /def.h/1.181/Result of merge//
 /tags.c/1.28/Result of merge//
-/util.c/1.51/Tue Jul  9 15:25:51 2024//
 /region.c/1.45/Result of merge//
-/mg.1/1.139/Sun Jul 28 21:01:32 2024//
 /dired.c/1.105/Result of merge//
-/kbd.c/1.37/Mon Aug 18 05:23:11 2025//
 /interpreter.c/1.37/Result of merge//
-/tutorial/1.19/Sat Feb 21 18:43:27 2026//
-/word.c/1.23/Tue Feb 24 21:33:15 2026//
-/echo.c/1.70/Mon Mar  2 21:03:51 2026//
-/re_search.c/1.38/Mon Mar  2 21:03:51 2026//
 /fileio.c/1.113/Tue Mar  3 08:14:02 2026//
-/file.c/1.105/Result of merge//
-/funmap.c/1.68/Tue Mar  3 08:16:04 2026//
+/README/1.14/Sun Mar 22 11:03:44 2026//
+/autoexec.c/1.19/Sun Mar 22 11:03:44 2026//
+/basic.c/1.54/Sun Mar 22 11:03:44 2026//
+/bell.c/1.7/Sun Mar 22 11:03:44 2026//
+/buffer.c/1.114/Sun Mar 22 11:03:44 2026//
+/chrdef.h/1.10/Sun Mar 22 11:03:44 2026//
+/cinfo.c/1.18/Sun Mar 22 11:03:44 2026//
+/cmode.c/1.23/Sun Mar 22 11:03:44 2026//
+/cscope.c/1.22/Sun Mar 22 11:03:44 2026//
+/dir.c/1.33/Sun Mar 22 11:03:44 2026//
+/display.c/1.52/Sun Mar 22 11:03:44 2026//
+/echo.c/1.70/Sun Mar 22 11:03:44 2026//
+/file.c/1.105/Sun Mar 22 11:03:44 2026//
+/funmap.c/1.68/Sun Mar 22 11:03:44 2026//
+/funmap.h/1.8/Sun Mar 22 11:03:44 2026//
+/grep.c/1.50/Sun Mar 22 11:03:44 2026//
+/kbd.c/1.37/Sun Mar 22 11:03:44 2026//
+/kbd.h/1.19/Sun Mar 22 11:03:44 2026//
+/key.h/1.6/Sun Mar 22 11:03:44 2026//
+/keymap.c/1.61/Sun Mar 22 11:03:44 2026//
+/line.c/1.63/Sun Mar 22 11:03:44 2026//
+/log.c/1.13/Sun Mar 22 11:03:44 2026//
+/log.h/1.6/Sun Mar 22 11:03:44 2026//
+/macro.c/1.18/Sun Mar 22 11:03:44 2026//
+/macro.h/1.7/Sun Mar 22 11:03:44 2026//
+/match.c/1.25/Sun Mar 22 11:03:44 2026//
+/mg.1/1.139/Sun Mar 22 11:03:44 2026//
+/modes.c/1.22/Sun Mar 22 11:03:44 2026//
+/paragraph.c/1.49/Sun Mar 22 11:03:44 2026//
+/pathnames.h/1.1/Sun Mar 22 11:03:44 2026//
+/re_search.c/1.38/Sun Mar 22 11:03:44 2026//
+/search.c/1.50/Sun Mar 22 11:03:44 2026//
+/spawn.c/1.13/Sun Mar 22 11:03:44 2026//
+/ttykbd.c/1.22/Sun Mar 22 11:03:44 2026//
+/tutorial/1.19/Sun Mar 22 11:03:44 2026//
+/util.c/1.51/Sun Mar 22 11:03:44 2026//
+/window.c/1.37/Sun Mar 22 11:03:44 2026//
+/word.c/1.23/Sun Mar 22 11:03:44 2026//
+/yank.c/1.16/Sun Mar 22 11:03:44 2026//
 D
