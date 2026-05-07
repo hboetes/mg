@@ -49,11 +49,6 @@ set_require_final_newline(int f, int n)
 	    buf, sizeof(buf), EFNEW | EFCR);
 	if (response == NULL)
 		return (ABORT);
-	else if (response[0] == '\0') {
-		dobeep();
-		ewprintf("Mode required");
-		return (FALSE);
-	}
 	newline_mode = strtonum(response, -1, 1, &es);
 	if (es != NULL) {
 		dobeep();
@@ -62,6 +57,9 @@ set_require_final_newline(int f, int n)
 	}
 	/* No need to normalize here as strtonum ensures the response is within -1, 1 */
 	require_final_newline = newline_mode;
+	ewprintf("Require final newline set to %d (%s)",
+		 require_final_newline,
+		 newline_mode == -1 ? "ask" : newline_mode == 0 ? "never" : "always");
 	return (TRUE);
 }
 
