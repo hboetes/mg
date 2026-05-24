@@ -94,5 +94,6 @@ OpenBSD mg repository:
 
   https://cvsweb.openbsd.org/src/usr.bin/mg/?sortby=date#dirlist
 
-So your best course of action is to send them a feature request, or even better,
-send them a patch.
+So your best course of action is to send them a feature request, or
+even better, send them a patch. To do that you will need to subscribe
+to the tech@openbsd.org mailinglist.
