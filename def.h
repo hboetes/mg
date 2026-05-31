@@ -211,6 +211,9 @@ struct mgwin {
 	int		 w_marko;	/* Byte offset for "mark"	*/
 	int		 w_toprow;	/* Origin 0 top row of window	*/
 	int		 w_ntrows;	/* # of rows of text in window	*/
+	int		 w_leftcol;	/* Origin 0 left col of window	*/
+	int		 w_ncols;	/* # of text cols in window	*/
+	int		 w_lbound;	/* horiz-scroll offset (extln)	*/
 	int		 w_frame;	/* #lines to reframe by.	*/
 	char		 w_rflag;	/* Redisplay Flags.		*/
 	char		 w_flag;	/* Flags.			*/
@@ -218,6 +221,8 @@ struct mgwin {
 	int		 w_dotline;	/* current line number of dot	*/
 	int		 w_markline;	/* current line number of mark	*/
 };
+
+#define WRIGHT(wp)	((wp)->w_leftcol + (wp)->w_ncols)
 #define w_wndp	w_list.l_p.l_wp
 #define w_name	w_list.l_name
 
@@ -443,6 +448,7 @@ int		 nextwind(int, int);
 int		 prevwind(int, int);
 int		 onlywind(int, int);
 int		 splitwind(int, int);
+int		 splitwind_horiz(int, int);
 int		 enlargewind(int, int);
 int		 shrinkwind(int, int);
 int		 delwind(int, int);

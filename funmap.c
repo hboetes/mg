@@ -212,6 +212,7 @@ static struct funmap functnames[] = {
 	{piperegion, "shell-command-on-region", 1},
 	{shrinkwind, "shrink-window", 1},
 	{space_to_tabstop, "space-to-tabstop", 0},
+	{splitwind_horiz, "split-window-horizontally", 0},
 	{splitwind, "split-window-vertically", 0},
 	{definemacro, "start-kbd-macro", 0},
 	{spawncli, "suspend-emacs", 0},

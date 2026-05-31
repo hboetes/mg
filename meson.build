@@ -5,7 +5,10 @@
 
 project(
   'mg', 'c',
-  version: run_command('git', 'describe', '--tags', check: true).stdout().strip(),
+  version: run_command(
+    'sh', '-c',
+    'git describe --tags 2>/dev/null || echo 0-unknown',
+    check: false).stdout().strip(),
   default_options: ['warning_level=1'],
 )
 

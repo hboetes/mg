@@ -156,7 +156,7 @@ static PF cX0[] = {
 	delwind,		/* 0 */
 	onlywind,		/* 1 */
 	splitwind,		/* 2 */
-	rescan,			/* 3 */
+	splitwind_horiz,	/* 3 */
 	NULL			/* 4 */
 };
 

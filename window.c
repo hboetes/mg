@@ -29,6 +29,9 @@ new_window(struct buffer *bp)
 	wp->w_marko = 0;
 	wp->w_rflag = 0;
 	wp->w_frame = 0;
+	wp->w_leftcol = 0;
+	wp->w_ncols = ncol;
+	wp->w_lbound = 0;
 	wp->w_wrapline = NULL;
 	wp->w_dotline = wp->w_markline = 1;
 	if (bp)
@@ -52,6 +55,115 @@ reposition(int f, int n)
 }
 
 /*
+ * Minimum text columns per window after a vertical (side-by-side) split.
+ * The divider column itself is not counted, so two windows split from one
+ * need a parent at least 2*MIN_WCOLS + 1 columns wide.
+ */
+#define MIN_WCOLS	8
+
+/*
+ * Proportionally rescale every window's column geometry when the terminal
+ * width changes and vertical splits exist. Walks the unique divider
+ * positions in the current layout, maps each one to a new column via
+ * (D * newncol / oldncol), then re-derives every window's w_leftcol and
+ * w_ncols from those mappings. This preserves the invariant that two
+ * windows sharing an edge in the old layout still share the same edge
+ * in the new layout (so the divider stays a single column).
+ *
+ * If a band would end up narrower than MIN_WCOLS or dividers would cross,
+ * falls back to collapsing all vertical splits onto the full new width.
+ */
+static void
+rescale_columns(int oldncol, int newncol)
+{
+	struct mgwin	*wp;
+	int		 dividers[64], newdivs[64];
+	int		 nd = 0;
+	int		 i, j, key;
+
+	/* Gather unique old divider column positions (w_leftcol - 1). */
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		if (wp->w_leftcol > 0) {
+			int dup = FALSE, d = wp->w_leftcol - 1;
+
+			for (i = 0; i < nd; i++)
+				if (dividers[i] == d) {
+					dup = TRUE;
+					break;
+				}
+			if (!dup && nd < (int)(sizeof(dividers) /
+			    sizeof(dividers[0])))
+				dividers[nd++] = d;
+		}
+	}
+
+	/* Insertion sort — nd is tiny. */
+	for (i = 1; i < nd; i++) {
+		key = dividers[i];
+		for (j = i - 1; j >= 0 && dividers[j] > key; j--)
+			dividers[j+1] = dividers[j];
+		dividers[j+1] = key;
+	}
+
+	/*
+	 * Map each old divider position to a new one, proportionally with
+	 * round-to-nearest. Truncation produces a 1-column drift on every
+	 * round trip when the user drags the terminal back and forth.
+	 */
+	for (i = 0; i < nd; i++)
+		newdivs[i] = (int)(((long long)dividers[i] * newncol +
+		    oldncol / 2) / oldncol);
+
+	/*
+	 * Validate: every band on either side of every divider must have
+	 * at least MIN_WCOLS columns of text. If not, the new width can't
+	 * accommodate the layout — collapse all vertical splits cleanly
+	 * to a single full-width column instead of producing tiny windows.
+	 */
+	for (i = 0; i < nd; i++) {
+		int leftbound = (i == 0) ? 0 : newdivs[i-1] + 1;
+		int rightbound = (i == nd - 1) ? newncol : newdivs[i+1];
+
+		if (newdivs[i] - leftbound < MIN_WCOLS ||
+		    rightbound - newdivs[i] - 1 < MIN_WCOLS) {
+			for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+				wp->w_leftcol = 0;
+				wp->w_ncols = newncol;
+				wp->w_lbound = 0;
+			}
+			return;
+		}
+	}
+
+	/* Apply the mapping to every window. */
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		int new_left = 0;
+		int new_right = newncol;
+		int old_right = wp->w_leftcol + wp->w_ncols;
+
+		if (wp->w_leftcol > 0) {
+			for (i = 0; i < nd; i++) {
+				if (dividers[i] == wp->w_leftcol - 1) {
+					new_left = newdivs[i] + 1;
+					break;
+				}
+			}
+		}
+		if (old_right < oldncol) {
+			for (i = 0; i < nd; i++) {
+				if (dividers[i] == old_right) {
+					new_right = newdivs[i];
+					break;
+				}
+			}
+		}
+		wp->w_leftcol = new_left;
+		wp->w_ncols = new_right - new_left;
+		wp->w_lbound = 0;
+	}
+}
+
+/*
  * Refresh the display.  A call is made to the "ttresize" entry in the
  * terminal handler, which tries to reset "nrow" and "ncol".  They will,
  * however, never be set outside of the NROW or NCOL range.  If the display
@@ -71,33 +183,217 @@ redraw(int f, int n)
 	return (do_redraw(f, n, FALSE));
 }
 
+/*
+ * Demote every window except curwp into oblivion, then resize curwp to
+ * the full new (nrow, ncol). Used as the bailout path when the new
+ * terminal geometry can no longer accommodate the current layout —
+ * something like onlywind(), but safe to call from inside do_redraw
+ * (does not consult anything beyond curwp / curbp).
+ */
+static void
+collapse_to_curwp(void)
+{
+	struct mgwin	*wp;
+
+	while (wheadp != curwp) {
+		wp = wheadp;
+		wheadp = wp->w_wndp;
+		if (--wp->w_bufp->b_nwnd == 0) {
+			wp->w_bufp->b_dotp = wp->w_dotp;
+			wp->w_bufp->b_doto = wp->w_doto;
+			wp->w_bufp->b_markp = wp->w_markp;
+			wp->w_bufp->b_marko = wp->w_marko;
+			wp->w_bufp->b_dotline = wp->w_dotline;
+			wp->w_bufp->b_markline = wp->w_markline;
+		}
+		free(wp);
+	}
+	while (curwp->w_wndp != NULL) {
+		wp = curwp->w_wndp;
+		curwp->w_wndp = wp->w_wndp;
+		if (--wp->w_bufp->b_nwnd == 0) {
+			wp->w_bufp->b_dotp = wp->w_dotp;
+			wp->w_bufp->b_doto = wp->w_doto;
+			wp->w_bufp->b_markp = wp->w_markp;
+			wp->w_bufp->b_marko = wp->w_marko;
+			wp->w_bufp->b_dotline = wp->w_dotline;
+			wp->w_bufp->b_markline = wp->w_markline;
+		}
+		free(wp);
+	}
+	curwp->w_toprow = 0;
+	curwp->w_leftcol = 0;
+	curwp->w_ncols = ncol;
+	curwp->w_lbound = 0;
+	curwp->w_ntrows = nrow - 2;
+	if (curwp->w_ntrows < 1)
+		curwp->w_ntrows = 1;
+	curwp->w_rflag |= WFMODE | WFFULL;
+}
+
+/*
+ * For each unique column band (windows sharing a w_leftcol),
+ * proportionally rescale every window in the band so the band fills
+ * from its first window's toprow down to row newnrow - 2 (just above
+ * the echo line). Walks each band top-to-bottom, sorts windows by
+ * w_toprow, recomputes each window's w_ntrows in proportion to its
+ * old text-row share, and reassigns w_toprow to keep the band
+ * contiguous.
+ *
+ * Returns FALSE if any band can't fit at least 1 text row + 1
+ * modeline row per window. Caller is expected to collapse_to_curwp()
+ * on failure.
+ */
+static int
+adjust_row_per_band(int newnrow)
+{
+	struct mgwin	*wp, *o, *tmp, *band[64];
+	int		 seen[64];
+	int		 nseen = 0;
+	int		 i, j, k, nband, dup;
+
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		int my_leftcol = wp->w_leftcol;
+		int oldbottom, oldfirsttop, oldbandheight, newbandheight;
+		int old_total_text, cur_toprow;
+		int newntrows;
+
+		dup = FALSE;
+		for (i = 0; i < nseen; i++) {
+			if (seen[i] == my_leftcol) {
+				dup = TRUE;
+				break;
+			}
+		}
+		if (dup)
+			continue;
+		if (nseen < (int)(sizeof(seen) / sizeof(seen[0])))
+			seen[nseen++] = my_leftcol;
+
+		/* Collect this band's windows. */
+		nband = 0;
+		for (o = wheadp; o != NULL; o = o->w_wndp) {
+			if (o->w_leftcol == my_leftcol &&
+			    nband < (int)(sizeof(band) / sizeof(band[0])))
+				band[nband++] = o;
+		}
+
+		/* Insertion sort by w_toprow. */
+		for (j = 1; j < nband; j++) {
+			tmp = band[j];
+			for (k = j - 1;
+			    k >= 0 && band[k]->w_toprow > tmp->w_toprow; k--)
+				band[k+1] = band[k];
+			band[k+1] = tmp;
+		}
+
+		oldfirsttop = band[0]->w_toprow;
+		oldbottom = band[nband-1]->w_toprow +
+		    band[nband-1]->w_ntrows;
+		/* +1 to include the bottom modeline row */
+		oldbandheight = oldbottom - oldfirsttop + 1;
+
+		/*
+		 * The band keeps its top edge where it was (other bands
+		 * may also start there; rearranging across bands is more
+		 * than this function tackles). It must now end at row
+		 * newnrow - 2 (modeline of last window), so the new
+		 * band height is newnrow - 1 - oldfirsttop.
+		 */
+		newbandheight = newnrow - 1 - oldfirsttop;
+		if (newbandheight < 2 * nband)
+			return (FALSE);
+
+		/*
+		 * Each window contributes 1 modeline + at least 1 text row.
+		 * Distribute the remaining text rows proportionally to the
+		 * old text-row counts.
+		 */
+		old_total_text = oldbandheight - nband; /* subtract modelines */
+		if (old_total_text < nband)
+			old_total_text = nband;
+
+		cur_toprow = oldfirsttop;
+		for (j = 0; j < nband; j++) {
+			if (j == nband - 1) {
+				/* last window takes whatever's left */
+				newntrows = newnrow - 1 - cur_toprow - 1;
+			} else {
+				newntrows = (int)(((long long)
+				    band[j]->w_ntrows *
+				    (newbandheight - nband) +
+				    old_total_text / 2) / old_total_text);
+				if (newntrows < 1)
+					newntrows = 1;
+			}
+			if (newntrows < 1)
+				return (FALSE);
+			band[j]->w_toprow = cur_toprow;
+			band[j]->w_ntrows = newntrows;
+			band[j]->w_rflag |= WFMODE | WFFULL;
+			cur_toprow += newntrows + 1; /* +1 for modeline */
+		}
+	}
+	return (TRUE);
+}
+
 int
 do_redraw(int f, int n, int force)
 {
 	struct mgwin	*wp;
 	int		 oldnrow, oldncol;
+	int		 has_vsplit;
 
 	oldnrow = nrow;
 	oldncol = ncol;
 	ttresize();
-	if (nrow != oldnrow || ncol != oldncol || force) {
+	if (nrow == oldnrow && ncol == oldncol && !force) {
+		sgarbf = TRUE;
+		return (TRUE);
+	}
 
-		/* find last */
-		wp = wheadp;
-		while (wp->w_wndp != NULL)
-			wp = wp->w_wndp;
-
-		/* check if too small */
-		if (nrow < wp->w_toprow + 3) {
-			dobeep();
-			ewprintf("Display unusable");
-			return (FALSE);
-		}
-		wp->w_ntrows = nrow - wp->w_toprow - 2;
+	/* If the new screen is entirely unusable, collapse and beep. */
+	if (nrow < 3) {
+		collapse_to_curwp();
+		dobeep();
+		ewprintf("Display unusable");
 		sgarbf = TRUE;
 		update(CMODE);
-	} else
-		sgarbf = TRUE;
+		return (FALSE);
+	}
+
+	has_vsplit = FALSE;
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		if (wp->w_leftcol > 0 || wp->w_ncols != oldncol) {
+			has_vsplit = TRUE;
+			break;
+		}
+	}
+
+	/* Column-axis adjustment. */
+	if (!has_vsplit) {
+		/* No vertical splits: every window owns the full width. */
+		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+			wp->w_leftcol = 0;
+			wp->w_ncols = ncol;
+			wp->w_lbound = 0;
+		}
+	} else if (ncol != oldncol) {
+		/* Have vsplits and width changed: rescale proportionally. */
+		rescale_columns(oldncol, ncol);
+	}
+	/* Have vsplits, width unchanged: leave column geometry alone. */
+
+	/*
+	 * Row-axis adjustment. With vertical splits a flat last-window
+	 * resize would leave parallel bands hanging off the screen, so
+	 * grow/shrink each column band's bottommost window instead.
+	 */
+	if (!adjust_row_per_band(nrow))
+		collapse_to_curwp();
+
+	sgarbf = TRUE;
+	update(CMODE);
 	return (TRUE);
 }
 
@@ -228,6 +524,11 @@ splitwind(int f, int n)
 	wp->w_dotline = curwp->w_dotline;
 	wp->w_markline = curwp->w_markline;
 
+	/* horizontal split: inherit column geometry from the parent */
+	wp->w_leftcol = curwp->w_leftcol;
+	wp->w_ncols = curwp->w_ncols;
+	wp->w_lbound = 0;
+
 	/* figure out which half of the screen we're in */
 	ntru = (curwp->w_ntrows - 1) / 2;	/* Upper size */
 	ntrl = (curwp->w_ntrows - 1) - ntru;	/* Lower size */
@@ -281,6 +582,77 @@ splitwind(int f, int n)
 	/* if FFOTHARG, set flags) */
 	if (f & FFOTHARG)
 		wp->w_flag = n;
+
+	return (TRUE);
+}
+
+/*
+ * Split the current window vertically (i.e. produce a left/right pair with
+ * a one-column "|" divider in between). Mirrors splitwind() but acts on the
+ * column axis. The new window is inserted in the window list immediately
+ * after the current one and shows the same buffer at the same dot/mark; the
+ * original window remains current and keeps the left half.
+ */
+int
+splitwind_horiz(int f, int n)
+{
+	struct mgwin	*wp;
+	int		 ntrleft, ntrright;
+
+	if (curwp->w_ncols < 2 * MIN_WCOLS + 1) {
+		dobeep();
+		ewprintf("Cannot split a %d column window", curwp->w_ncols);
+		return (FALSE);
+	}
+	wp = new_window(curbp);
+	if (wp == NULL) {
+		dobeep();
+		ewprintf("Unable to create a window");
+		return (FALSE);
+	}
+
+	/* share dot and mark with the original window */
+	wp->w_dotp = curwp->w_dotp;
+	wp->w_doto = curwp->w_doto;
+	wp->w_markp = curwp->w_markp;
+	wp->w_marko = curwp->w_marko;
+	wp->w_dotline = curwp->w_dotline;
+	wp->w_markline = curwp->w_markline;
+	wp->w_linep = curwp->w_linep;
+
+	/*
+	 * Carve out columns: subtract one for the divider, then split what
+	 * is left as evenly as possible, giving any odd column to the left
+	 * (original) half.
+	 */
+	ntrleft = (curwp->w_ncols - 1) / 2 + ((curwp->w_ncols - 1) % 2);
+	ntrright = curwp->w_ncols - 1 - ntrleft;
+
+	/* new window owns the right half */
+	wp->w_toprow = curwp->w_toprow;
+	wp->w_ntrows = curwp->w_ntrows;
+	wp->w_leftcol = curwp->w_leftcol + ntrleft + 1;
+	wp->w_ncols = ntrright;
+	wp->w_lbound = 0;
+
+	/* original window keeps the left half */
+	curwp->w_ncols = ntrleft;
+	curwp->w_lbound = 0;
+
+	/* insert the new window into the list directly after curwp */
+	wp->w_wndp = curwp->w_wndp;
+	curwp->w_wndp = wp;
+
+	/* both halves need a full redraw including mode line */
+	curwp->w_rflag |= WFMODE | WFFULL;
+	wp->w_rflag |= WFMODE | WFFULL;
+
+	/* if FFOTHARG, set flags on the new window */
+	if (f & FFOTHARG)
+		wp->w_flag = n;
+
+	/* force a hard refresh so the divider column is painted cleanly */
+	sgarbf = TRUE;
 
 	return (TRUE);
 }

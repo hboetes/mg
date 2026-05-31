@@ -31,7 +31,9 @@
 struct video {
 	short	v_hash;		/* Hash code, for compares.	 */
 	short	v_flag;		/* Flag word.			 */
-	short	v_color;	/* Color of the line.		 */
+	short	v_color;	/* Color of [v_lend, ncol), or whole row */
+	short	v_lcolor;	/* Color of [0, v_lend) when v_lend > 0 */
+	short	v_lend;		/* Split column; 0 = single-color row	 */
 	int	v_cost;		/* Cost of display.		 */
 	char	*v_text;	/* The actual characters.	 */
 };
@@ -55,9 +57,10 @@ void	vtmove(int, int);
 void	vtputc(int, struct mgwin *);
 void	vtpute(int, struct mgwin *);
 int	vtputs(const char *, struct mgwin *);
-void	vteeol(void);
-void	updext(int, int);
+void	vteeol(struct mgwin *);
+void	updext(int, int, struct mgwin *);
 void	modeline(struct mgwin *, int);
+void	paint_divider(struct mgwin *);
 void	setscores(int, int);
 void	traceback(int, int, int, int);
 void	ucopy(struct video *, struct video *);
@@ -73,8 +76,6 @@ int	ttrow = HUGE;		/* Physical cursor row.		 */
 int	ttcol = HUGE;		/* Physical cursor column.	 */
 int	tttop = HUGE;		/* Top of scroll region.	 */
 int	ttbot = HUGE;		/* Bottom of scroll region.	 */
-int	lbound = 0;		/* leftmost bound of the current */
-				/* line being displayed		 */
 
 struct video	**vscreen;		/* Edge vector, virtual.	 */
 struct video	**pscreen;		/* Edge vector, physical.	 */
@@ -312,17 +313,18 @@ vtputc(int c, struct mgwin *wp)
 {
 	struct video	*vp;
 	int		 target;
+	int		 right = WRIGHT(wp);
 
 	c &= 0xff;
 
 	vp = vscreen[vtrow];
-	if (vtcol >= ncol)
-		vp->v_text[ncol - 1] = '$';
+	if (vtcol >= right)
+		vp->v_text[right - 1] = '$';
 	else if (c == '\t') {
-		target = ntabstop(vtcol, wp->w_bufp->b_tabw);
+		target = ntabstop(vtcol - wp->w_leftcol, wp->w_bufp->b_tabw);
 		do {
 			vtputc(' ', wp);
-		} while (vtcol < ncol && vtcol < target);
+		} while (vtcol < right && (vtcol - wp->w_leftcol) < target);
 	} else if (ISCTRL(c)) {
 		vtputc('^', wp);
 		vtputc(CCHR(c), wp);
@@ -346,22 +348,25 @@ vtpute(int c, struct mgwin *wp)
 {
 	struct video *vp;
 	int target;
+	int right = WRIGHT(wp);
+	int textcol = vtcol - wp->w_leftcol + wp->w_lbound;
 
 	c &= 0xff;
 
 	vp = vscreen[vtrow];
-	if (vtcol >= ncol)
-		vp->v_text[ncol - 1] = '$';
+	if (vtcol >= right)
+		vp->v_text[right - 1] = '$';
 	else if (c == '\t') {
-		target = ntabstop(vtcol + lbound, wp->w_bufp->b_tabw);
+		target = ntabstop(textcol, wp->w_bufp->b_tabw);
 		do {
 			vtpute(' ', wp);
-		} while (((vtcol + lbound) < target) && vtcol < ncol);
+		} while (((vtcol - wp->w_leftcol + wp->w_lbound) < target)
+		    && vtcol < right);
 	} else if (ISCTRL(c) != FALSE) {
 		vtpute('^', wp);
 		vtpute(CCHR(c), wp);
 	} else if (isprint(c)) {
-		if (vtcol >= 0)
+		if (vtcol >= wp->w_leftcol)
 			vp->v_text[vtcol] = c;
 		++vtcol;
 	} else {
@@ -379,12 +384,13 @@ vtpute(int c, struct mgwin *wp)
  * hardware erase to end of line command should be used to display this.
  */
 void
-vteeol(void)
+vteeol(struct mgwin *wp)
 {
 	struct video *vp;
+	int right = WRIGHT(wp);
 
 	vp = vscreen[vtrow];
-	while (vtcol < ncol)
+	while (vtcol < right)
 		vp->v_text[vtcol++] = ' ';
 }
 
@@ -411,6 +417,21 @@ update(int modelinecolor)
 
 	if (charswaiting())
 		return;
+
+	/*
+	 * Safety net: if the terminal is too small to draw anything,
+	 * skip the paint entirely. vscreen is sized nrow-1; any row
+	 * index >= nrow-1 would dereference out of bounds.
+	 */
+	if (nrow < 3)
+		return;
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		if (wp->w_toprow < 0 ||
+		    wp->w_toprow + wp->w_ntrows + 1 > nrow - 1 ||
+		    wp->w_leftcol < 0 ||
+		    wp->w_leftcol + wp->w_ncols > ncol)
+			return;
+	}
 	if (sgarbf) {		/* must update everything */
 		wp = wheadp;
 		while (wp != NULL) {
@@ -477,28 +498,31 @@ update(int modelinecolor)
 				lp = lforw(lp);
 			}
 			vscreen[i]->v_color = CTEXT;
+			vscreen[i]->v_lend = 0;
 			vscreen[i]->v_flag |= (VFCHG | VFHBAD);
-			vtmove(i, 0);
+			vtmove(i, wp->w_leftcol);
 			for (j = 0; j < llength(lp); ++j)
 				vtputc(lgetc(lp, j), wp);
-			vteeol();
+			vteeol(wp);
 		} else if ((wp->w_rflag & (WFEDIT | WFFULL)) != 0) {
 			hflag = TRUE;
 			while (i < wp->w_toprow + wp->w_ntrows) {
 				vscreen[i]->v_color = CTEXT;
+				vscreen[i]->v_lend = 0;
 				vscreen[i]->v_flag |= (VFCHG | VFHBAD);
-				vtmove(i, 0);
+				vtmove(i, wp->w_leftcol);
 				if (lp != wp->w_bufp->b_headp) {
 					for (j = 0; j < llength(lp); ++j)
 						vtputc(lgetc(lp, j), wp);
 					lp = lforw(lp);
 				}
-				vteeol();
+				vteeol(wp);
 				++i;
 			}
 		}
 		if ((wp->w_rflag & WFMODE) != 0)
 			modeline(wp, modelinecolor);
+		paint_divider(wp);
 		wp->w_rflag = 0;
 		wp->w_frame = 0;
 	}
@@ -525,12 +549,12 @@ update(int modelinecolor)
 			curcol += strlen(bf);
 		}
 	}
-	if (curcol >= ncol - 1) {	/* extended line. */
+	if (curcol >= curwp->w_ncols - 1) {	/* extended line. */
 		/* flag we are extended and changed */
 		vscreen[currow]->v_flag |= VFEXT | VFCHG;
-		updext(currow, curcol);	/* and output extended line */
+		updext(currow, curcol, curwp); /* and output extended line */
 	} else
-		lbound = 0;	/* not extended line */
+		curwp->w_lbound = 0;	/* not extended line */
 
 	/*
 	 * Make sure no lines need to be de-extended because the cursor is no
@@ -545,11 +569,11 @@ update(int modelinecolor)
 				/* always flag extended lines as changed */
 				vscreen[i]->v_flag |= VFCHG;
 				if ((wp != curwp) || (lp != wp->w_dotp) ||
-				    (curcol < ncol - 1)) {
-					vtmove(i, 0);
+				    (curcol < curwp->w_ncols - 1)) {
+					vtmove(i, wp->w_leftcol);
 					for (j = 0; j < llength(lp); ++j)
 						vtputc(lgetc(lp, j), wp);
-					vteeol();
+					vteeol(wp);
 					/* this line no longer is extended */
 					vscreen[i]->v_flag &= ~VFEXT;
 				}
@@ -576,7 +600,7 @@ update(int modelinecolor)
 			uline(i, vscreen[i], &blanks);
 			ucopy(vscreen[i], pscreen[i]);
 		}
-		ttmove(currow, curcol - lbound);
+		ttmove(currow, curwp->w_leftcol + curcol - curwp->w_lbound);
 		ttflush();
 		return;
 	}
@@ -597,7 +621,7 @@ update(int modelinecolor)
 			++offs;
 		}
 		if (offs == nrow - 1) {		/* Might get it all.	*/
-			ttmove(currow, curcol - lbound);
+			ttmove(currow, curwp->w_leftcol + curcol - curwp->w_lbound);
 			ttflush();
 			return;
 		}
@@ -618,7 +642,7 @@ update(int modelinecolor)
 		traceback(offs, size, size, size);
 		for (i = 0; i < size; ++i)
 			ucopy(vscreen[offs + i], pscreen[offs + i]);
-		ttmove(currow, curcol - lbound);
+		ttmove(currow, curwp->w_leftcol + curcol - curwp->w_lbound);
 		ttflush();
 		return;
 	}
@@ -630,7 +654,7 @@ update(int modelinecolor)
 			ucopy(vp1, vp2);
 		}
 	}
-	ttmove(currow, curcol - lbound);
+	ttmove(currow, curwp->w_leftcol + curcol - curwp->w_lbound);
 	ttflush();
 }
 
@@ -659,30 +683,31 @@ ucopy(struct video *vvp, struct video *pvp)
  * left to let the user see where the cursor is.
  */
 void
-updext(int currow, int curcol)
+updext(int currow, int curcol, struct mgwin *wp)
 {
 	struct line	*lp;			/* pointer to current line */
 	int	 j;			/* index into line */
+	int	 wncol = wp->w_ncols;
 
-	if (ncol < 2)
+	if (wncol < 2)
 		return;
 
 	/*
 	 * calculate what column the left bound should be
-	 * (force cursor into middle half of screen)
+	 * (force cursor into middle half of the window)
 	 */
-	lbound = curcol - (curcol % (ncol >> 1)) - (ncol >> 2);
+	wp->w_lbound = curcol - (curcol % (wncol >> 1)) - (wncol >> 2);
 
 	/*
 	 * scan through the line outputting characters to the virtual screen
-	 * once we reach the left edge
+	 * once we reach the left edge of this window
 	 */
-	vtmove(currow, -lbound);		/* start scanning offscreen */
-	lp = curwp->w_dotp;			/* line to output */
+	vtmove(currow, wp->w_leftcol - wp->w_lbound);	/* may be off-window */
+	lp = wp->w_dotp;			/* line to output */
 	for (j = 0; j < llength(lp); ++j)	/* until the end-of-line */
-		vtpute(lgetc(lp, j), curwp);
-	vteeol();				/* truncate the virtual line */
-	vscreen[currow]->v_text[0] = '$';	/* and put a '$' in column 1 */
+		vtpute(lgetc(lp, j), wp);
+	vteeol(wp);				/* truncate the virtual line */
+	vscreen[currow]->v_text[wp->w_leftcol] = '$';	/* '$' at left edge */
 }
 
 /*
@@ -703,6 +728,29 @@ uline(int row, struct video *vvp, struct video *pvp)
 	char  *cp4;
 	char  *cp5;
 	int    nbflag;
+
+	/*
+	 * Split-color row (vertical-split modeline): paint two color regions
+	 * unconditionally — the diff engine doesn't model color transitions.
+	 */
+	if (vvp->v_lend > 0) {
+		ttmove(row, 0);
+		ttcolor(vvp->v_lcolor);
+		cp1 = &vvp->v_text[0];
+		cp2 = &vvp->v_text[vvp->v_lend];
+		while (cp1 != cp2) {
+			ttputc(*cp1++);
+			++ttcol;
+		}
+		ttcolor(vvp->v_color);
+		cp2 = &vvp->v_text[ncol];
+		while (cp1 != cp2) {
+			ttputc(*cp1++);
+			++ttcol;
+		}
+		ttcolor(CTEXT);
+		return;
+	}
 
 	if (vvp->v_color != pvp->v_color) {	/* Wrong color, do a	 */
 		ttmove(row, 0);			/* full redraw.		 */
@@ -776,6 +824,31 @@ uline(int row, struct video *vvp, struct video *pvp)
 }
 
 /*
+ * Paint the vertical divider column that sits at wp->w_leftcol - 1
+ * for any window whose left edge is not the screen's left edge.
+ * Writes the divider glyph into every row owned by the window
+ * (text rows plus the mode-line row) and marks those rows changed
+ * so the diff engine emits them to the terminal.
+ *
+ * No-op for windows flush against the left of the screen.
+ */
+void
+paint_divider(struct mgwin *wp)
+{
+	int row, col, lastrow;
+
+	if (wp->w_leftcol <= 0)
+		return;
+
+	col = wp->w_leftcol - 1;
+	lastrow = wp->w_toprow + wp->w_ntrows;	/* mode-line row */
+	for (row = wp->w_toprow; row <= lastrow; row++) {
+		vscreen[row]->v_text[col] = '|';
+		vscreen[row]->v_flag |= VFCHG;
+	}
+}
+
+/*
  * Redisplay the mode line for the window pointed to by the "wp".
  * This is the only routine that has any idea of how the mode line is
  * formatted. You can change the modeline format by hacking at this
@@ -792,9 +865,64 @@ modeline(struct mgwin *wp, int modelinecolor)
 	int len;
 
 	n = wp->w_toprow + wp->w_ntrows;	/* Location.		 */
-	vscreen[n]->v_color = modelinecolor;	/* Mode line color.	 */
+	/*
+	 * Compute the row's color regions by walking all windows. Each
+	 * window at row n is either contributing a modeline (its
+	 * w_toprow + w_ntrows == n) or text (n in its text-row range).
+	 * We merge all modeline columns into one extent [mode_l, mode_r),
+	 * and all text columns into [text_l, text_r). If those extents
+	 * don't interleave (one is strictly left of the other), we paint
+	 * a two-region row; otherwise we degrade to plain CTEXT.
+	 */
+	{
+		struct mgwin	*other;
+		int		 mode_l, mode_r;
+		int		 text_l = -1, text_r = -1;
+
+		mode_l = wp->w_leftcol;
+		mode_r = WRIGHT(wp);
+		for (other = wheadp; other != NULL; other = other->w_wndp) {
+			int other_modeline = other->w_toprow + other->w_ntrows;
+
+			if (other == wp)
+				continue;
+			if (other_modeline == n) {
+				if (other->w_leftcol < mode_l)
+					mode_l = other->w_leftcol;
+				if (WRIGHT(other) > mode_r)
+					mode_r = WRIGHT(other);
+			} else if (n >= other->w_toprow &&
+			    n <  other_modeline) {
+				if (text_l == -1 ||
+				    other->w_leftcol < text_l)
+					text_l = other->w_leftcol;
+				if (WRIGHT(other) > text_r)
+					text_r = WRIGHT(other);
+			}
+		}
+
+		if (text_l == -1) {
+			/* No text on this row: full-row modeline. */
+			vscreen[n]->v_color = modelinecolor;
+			vscreen[n]->v_lend = 0;
+		} else if (mode_r <= text_l) {
+			/* Modelines on the left, text on the right. */
+			vscreen[n]->v_lcolor = modelinecolor;
+			vscreen[n]->v_lend = mode_r;
+			vscreen[n]->v_color = CTEXT;
+		} else if (text_r <= mode_l) {
+			/* Text on the left, modelines on the right. */
+			vscreen[n]->v_lcolor = CTEXT;
+			vscreen[n]->v_lend = mode_l;
+			vscreen[n]->v_color = modelinecolor;
+		} else {
+			/* Interleaved / >2 regions: degrade to plain text. */
+			vscreen[n]->v_color = CTEXT;
+			vscreen[n]->v_lend = 0;
+		}
+	}
 	vscreen[n]->v_flag |= (VFCHG | VFHBAD);	/* Recompute, display.	 */
-	vtmove(n, 0);				/* Seek to right line.	 */
+	vtmove(n, wp->w_leftcol);		/* Seek to right line.	 */
 	bp = wp->w_bufp;
 	vtputc('-', wp);
 	vtputc('-', wp);
@@ -847,7 +975,7 @@ modeline(struct mgwin *wp, int modelinecolor)
 	if ((linenos || colnos) && len < sizeof(sl) && len != -1)
 		n += vtputs(sl, wp);
 
-	while (n < ncol) {			/* Pad out.		 */
+	while (n < wp->w_ncols) {		/* Pad out.		 */
 		vtputc('-', wp);
 		++n;
 	}
@@ -893,6 +1021,8 @@ hash(struct video *vp)
 		vp->v_cost = i + n;		/* Bytes + blanks.	 */
 		for (n = 0; i != 0; --i, --s)
 			n = (n << 5) + n + *s;
+		n = (n << 5) + n + vp->v_lend;	/* Fold in color-split	 */
+		n = (n << 5) + n + vp->v_lcolor;
 		vp->v_hash = n;			/* Hash code.		 */
 		vp->v_flag &= ~VFHBAD;		/* Flag as all done.	 */
 	}
