@@ -214,6 +214,7 @@ struct mgwin {
 	int		 w_leftcol;	/* Origin 0 left col of window	*/
 	int		 w_ncols;	/* # of text cols in window	*/
 	int		 w_lbound;	/* horiz-scroll offset (extln)	*/
+	int		 w_propw;	/* logical band weight (vsplit) */
 	int		 w_frame;	/* #lines to reframe by.	*/
 	char		 w_rflag;	/* Redisplay Flags.		*/
 	char		 w_flag;	/* Flags.			*/

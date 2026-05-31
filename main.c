@@ -298,6 +298,9 @@ edinit(struct buffer *bp)
 	wp->w_wndp = NULL;			/* Initialize window.	 */
 	wp->w_linep = wp->w_dotp = bp->b_headp;
 	wp->w_ntrows = nrow - 2;		/* 2 = mode, echo.	 */
+	wp->w_leftcol = 0;
+	wp->w_ncols = ncol;
+	wp->w_propw = 10000;			/* full proportional weight */
 	wp->w_rflag = WFMODE | WFFULL;		/* Full.		 */
 }
 

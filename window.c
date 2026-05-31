@@ -62,70 +62,170 @@ reposition(int f, int n)
 #define MIN_WCOLS	8
 
 /*
- * Proportionally rescale every window's column geometry when the terminal
- * width changes and vertical splits exist. Walks the unique divider
- * positions in the current layout, maps each one to a new column via
- * (D * newncol / oldncol), then re-derives every window's w_leftcol and
- * w_ncols from those mappings. This preserves the invariant that two
- * windows sharing an edge in the old layout still share the same edge
- * in the new layout (so the divider stays a single column).
+ * Proportionally rescale every window's column geometry to a new terminal
+ * width using each band's STABLE logical weight (w_propw). Because propw
+ * never changes during SIGWINCH-driven resizes, the result of "rescale
+ * 80 -> 200 in one shot" equals the result of "80 -> 81 -> ... -> 200 in
+ * many tiny steps". This matches how GNU Emacs distributes a frame resize:
+ * each window's logical share of the parent stays fixed; only the pixel
+ * projection of that share changes.
  *
- * If a band would end up narrower than MIN_WCOLS or dividers would cross,
- * falls back to collapsing all vertical splits onto the full new width.
+ * Algorithm (largest-remainder / Hamilton method):
+ *   1. Identify unique bands (windows sharing a w_leftcol). Sort left-to-
+ *      right by w_leftcol.
+ *   2. Total propw = sum of unique band weights. If any band has propw=0
+ *      (legacy or unset), bootstrap from its current w_ncols.
+ *   3. usable_new = newncol - (nbands - 1) divider columns.
+ *   4. Floor allocation per band: floor(propw * usable_new / total_propw).
+ *      Clamp to MIN_WCOLS.
+ *   5. Distribute leftover columns to bands with the largest fractional
+ *      remainders, breaking ties by giving extra to the band with the
+ *      smallest current allocation (so growth is symmetric on round
+ *      trips and not biased to one side).
+ *   6. Lay out left-to-right with one-column dividers and propagate to
+ *      every window in each band.
+ *
+ * If usable_new can't accommodate nbands * MIN_WCOLS, collapses all
+ * vertical splits to a single full-width column.
  */
 static void
 rescale_columns(int oldncol, int newncol)
 {
 	struct mgwin	*wp;
-	int		 dividers[64], newdivs[64];
-	int		 nd = 0;
-	int		 i, j, key;
+	int		 band_leftcol_old[64];
+	int		 band_propw[64];
+	int		 band_oldw[64];
+	int		 band_neww[64];
+	int		 band_newleft[64];
+	int		 order[64];
+	long long	 frac[64];
+	int		 nbands = 0;
+	int		 i, j;
+	int		 usable_new, total_propw, used, rem;
 
-	/* Gather unique old divider column positions (w_leftcol - 1). */
+	(void)oldncol;
+
+	/* Step 1: identify unique bands by w_leftcol. */
 	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-		if (wp->w_leftcol > 0) {
-			int dup = FALSE, d = wp->w_leftcol - 1;
+		int dup = FALSE;
 
-			for (i = 0; i < nd; i++)
-				if (dividers[i] == d) {
-					dup = TRUE;
-					break;
-				}
-			if (!dup && nd < (int)(sizeof(dividers) /
-			    sizeof(dividers[0])))
-				dividers[nd++] = d;
+		for (i = 0; i < nbands; i++)
+			if (band_leftcol_old[i] == wp->w_leftcol) {
+				dup = TRUE;
+				break;
+			}
+		if (!dup && nbands < (int)(sizeof(band_leftcol_old) /
+		    sizeof(band_leftcol_old[0]))) {
+			band_leftcol_old[nbands] = wp->w_leftcol;
+			band_propw[nbands] = wp->w_propw;
+			band_oldw[nbands] = wp->w_ncols;
+			nbands++;
 		}
 	}
 
-	/* Insertion sort — nd is tiny. */
-	for (i = 1; i < nd; i++) {
-		key = dividers[i];
-		for (j = i - 1; j >= 0 && dividers[j] > key; j--)
-			dividers[j+1] = dividers[j];
-		dividers[j+1] = key;
+	/* Sort bands left-to-right. */
+	for (i = 1; i < nbands; i++) {
+		int kl = band_leftcol_old[i];
+		int kp = band_propw[i];
+		int kw = band_oldw[i];
+
+		for (j = i - 1; j >= 0 && band_leftcol_old[j] > kl; j--) {
+			band_leftcol_old[j+1] = band_leftcol_old[j];
+			band_propw[j+1] = band_propw[j];
+			band_oldw[j+1] = band_oldw[j];
+		}
+		band_leftcol_old[j+1] = kl;
+		band_propw[j+1] = kp;
+		band_oldw[j+1] = kw;
+	}
+
+	if (nbands <= 1) {
+		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+			wp->w_leftcol = 0;
+			wp->w_ncols = newncol;
+			wp->w_lbound = 0;
+		}
+		return;
 	}
 
 	/*
-	 * Map each old divider position to a new one, proportionally with
-	 * round-to-nearest. Truncation produces a 1-column drift on every
-	 * round trip when the user drags the terminal back and forth.
+	 * Step 2: bootstrap propw if missing. Pre-existing layouts and
+	 * any band that lost its weight tracking get a weight derived
+	 * from current pixel width (one-time migration).
 	 */
-	for (i = 0; i < nd; i++)
-		newdivs[i] = (int)(((long long)dividers[i] * newncol +
-		    oldncol / 2) / oldncol);
+	total_propw = 0;
+	for (i = 0; i < nbands; i++) {
+		if (band_propw[i] <= 0)
+			band_propw[i] = band_oldw[i] > 0 ? band_oldw[i] : 1;
+		total_propw += band_propw[i];
+	}
+	if (total_propw <= 0)
+		total_propw = 1;
+
+	usable_new = newncol - (nbands - 1);
+	if (usable_new < nbands * MIN_WCOLS) {
+		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+			wp->w_leftcol = 0;
+			wp->w_ncols = newncol;
+			wp->w_lbound = 0;
+		}
+		return;
+	}
+
+	/* Step 4: floor allocation from propw. */
+	used = 0;
+	for (i = 0; i < nbands; i++) {
+		long long scaled = (long long)band_propw[i] * usable_new;
+		long long flr = scaled / total_propw;
+
+		band_neww[i] = (int)flr;
+		if (band_neww[i] < MIN_WCOLS)
+			band_neww[i] = MIN_WCOLS;
+		frac[i] = scaled - flr * total_propw;
+		order[i] = i;
+		used += band_neww[i];
+	}
 
 	/*
-	 * Validate: every band on either side of every divider must have
-	 * at least MIN_WCOLS columns of text. If not, the new width can't
-	 * accommodate the layout — collapse all vertical splits cleanly
-	 * to a single full-width column instead of producing tiny windows.
+	 * Step 5: order bands for leftover distribution. Primary key:
+	 * descending fractional remainder. Tie-break: ascending current
+	 * allocation (smaller band wins, so growth is even on round trips).
 	 */
-	for (i = 0; i < nd; i++) {
-		int leftbound = (i == 0) ? 0 : newdivs[i-1] + 1;
-		int rightbound = (i == nd - 1) ? newncol : newdivs[i+1];
+	for (i = 1; i < nbands; i++) {
+		int oi = order[i];
 
-		if (newdivs[i] - leftbound < MIN_WCOLS ||
-		    rightbound - newdivs[i] - 1 < MIN_WCOLS) {
+		for (j = i - 1; j >= 0; j--) {
+			int oj = order[j];
+
+			if (frac[oj] > frac[oi])
+				break;
+			if (frac[oj] == frac[oi] &&
+			    band_neww[oj] <= band_neww[oi])
+				break;
+			order[j+1] = order[j];
+		}
+		order[j+1] = oi;
+	}
+
+	rem = usable_new - used;
+	if (rem > 0) {
+		for (i = 0; i < rem; i++)
+			band_neww[order[i % nbands]]++;
+	} else if (rem < 0) {
+		int need = -rem;
+
+		for (i = nbands - 1; i >= 0 && need > 0; i--) {
+			int oi = order[i];
+			int can = band_neww[oi] - MIN_WCOLS;
+
+			if (can <= 0)
+				continue;
+			if (can > need)
+				can = need;
+			band_neww[oi] -= can;
+			need -= can;
+		}
+		if (need > 0) {
 			for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
 				wp->w_leftcol = 0;
 				wp->w_ncols = newncol;
@@ -135,31 +235,27 @@ rescale_columns(int oldncol, int newncol)
 		}
 	}
 
-	/* Apply the mapping to every window. */
-	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-		int new_left = 0;
-		int new_right = newncol;
-		int old_right = wp->w_leftcol + wp->w_ncols;
+	/* Step 6: assign new leftcols left-to-right with divider columns. */
+	{
+		int cursor = 0;
 
-		if (wp->w_leftcol > 0) {
-			for (i = 0; i < nd; i++) {
-				if (dividers[i] == wp->w_leftcol - 1) {
-					new_left = newdivs[i] + 1;
-					break;
-				}
+		for (i = 0; i < nbands; i++) {
+			band_newleft[i] = cursor;
+			cursor += band_neww[i] + 1;
+		}
+	}
+
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		for (i = 0; i < nbands; i++) {
+			if (band_leftcol_old[i] == wp->w_leftcol) {
+				wp->w_leftcol = band_newleft[i];
+				wp->w_ncols = band_neww[i];
+				wp->w_lbound = 0;
+				/* keep propw in sync if it was bootstrapped */
+				wp->w_propw = band_propw[i];
+				break;
 			}
 		}
-		if (old_right < oldncol) {
-			for (i = 0; i < nd; i++) {
-				if (dividers[i] == old_right) {
-					new_right = newdivs[i];
-					break;
-				}
-			}
-		}
-		wp->w_leftcol = new_left;
-		wp->w_ncols = new_right - new_left;
-		wp->w_lbound = 0;
 	}
 }
 
@@ -225,6 +321,7 @@ collapse_to_curwp(void)
 	curwp->w_leftcol = 0;
 	curwp->w_ncols = ncol;
 	curwp->w_lbound = 0;
+	curwp->w_propw = 10000;
 	curwp->w_ntrows = nrow - 2;
 	if (curwp->w_ntrows < 1)
 		curwp->w_ntrows = 1;
@@ -486,6 +583,10 @@ onlywind(int f, int n)
 
 	/* 2 = mode, echo */
 	curwp->w_ntrows = nrow - 2;
+	curwp->w_leftcol = 0;
+	curwp->w_ncols = ncol;
+	curwp->w_lbound = 0;
+	curwp->w_propw = 10000;
 	curwp->w_linep = lp;
 	curwp->w_rflag |= WFMODE | WFFULL;
 	return (TRUE);
@@ -524,10 +625,11 @@ splitwind(int f, int n)
 	wp->w_dotline = curwp->w_dotline;
 	wp->w_markline = curwp->w_markline;
 
-	/* horizontal split: inherit column geometry from the parent */
+	/* horizontal split: inherit column geometry and band weight */
 	wp->w_leftcol = curwp->w_leftcol;
 	wp->w_ncols = curwp->w_ncols;
 	wp->w_lbound = 0;
+	wp->w_propw = curwp->w_propw;
 
 	/* figure out which half of the screen we're in */
 	ntru = (curwp->w_ntrows - 1) / 2;	/* Upper size */
@@ -638,6 +740,22 @@ splitwind_horiz(int f, int n)
 	/* original window keeps the left half */
 	curwp->w_ncols = ntrleft;
 	curwp->w_lbound = 0;
+
+	/*
+	 * Split the parent's logical band weight evenly between the two
+	 * new bands. This weight is preserved across SIGWINCH resizes so
+	 * the two bands always grow/shrink in equal proportion.
+	 */
+	{
+		int parent_w = curwp->w_propw;
+		int half;
+
+		if (parent_w <= 0)
+			parent_w = 10000;
+		half = parent_w / 2;
+		curwp->w_propw = half;
+		wp->w_propw = parent_w - half;
+	}
 
 	/* insert the new window into the list directly after curwp */
 	wp->w_wndp = curwp->w_wndp;
