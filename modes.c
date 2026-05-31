@@ -20,7 +20,7 @@ int	changemode(int, int, char *);
 
 int	 defb_nmodes = 0;
 struct maps_s	*defb_modes[PBMODES] = { &fundamental_mode };
-int	 defb_flag = 0;
+int	 defb_flag = BFNOTAB;
 
 int
 changemode(int f, int n, char *newmode)

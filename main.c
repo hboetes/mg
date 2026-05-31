@@ -138,6 +138,12 @@ main(int argc, char **argv)
 	maps_init();		/* Keymaps and modes.		*/
 	funmap_init();		/* Functions.			*/
 
+	{
+		struct maps_s *notab_m = name_mode("notab");
+		if (notab_m != NULL && defb_nmodes < PBMODES - 1)
+			defb_modes[++defb_nmodes] = notab_m;
+	}
+
 #ifdef  MGLOG
 	if (!mgloginit())
 		errx(1, "Unable to create logging environment.");

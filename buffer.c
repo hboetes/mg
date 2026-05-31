@@ -27,7 +27,7 @@ static struct buffer *bnew(const char *);
 static int usebufname(const char *);
 
 /* Default tab width */
-int	 defb_tabw = 8;
+int	 defb_tabw = 2;
 
 /* Flag for global working dir */
 extern int globalwd;
