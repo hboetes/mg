@@ -663,6 +663,7 @@ int		 region_active_nonempty(void);
 int		 lowerregion(int, int);
 int		 upperregion(int, int);
 int		 prefixregion(int, int);
+int		 untabifyregion(int, int);
 int		 setprefix(int, int);
 int		 region_get_data(struct region *, char *, int);
 void		 region_put_data(const char *, int);

@@ -231,6 +231,7 @@ static struct funmap functnames[] = {
 	{undo_enable, "undo-enable", 0},
 	{undo_dump, "undo-list", 0},
 	{universal_argument, "universal-argument", 1},
+	{untabifyregion, "untabify-region", 0},
 	{upperregion, "upcase-region", 0},
 	{upperword, "upcase-word", 1},
 	{togglevisiblebell, "visible-bell", 0},

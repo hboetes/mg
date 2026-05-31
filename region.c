@@ -226,6 +226,88 @@ upperregion(int f, int n)
 }
 
 /*
+ * Untabify the region.  Replace each tab in the region with the number of
+ * spaces needed to reach the next tab stop, using the buffer's tab width
+ * (b_tabw).  Column tracking is line-relative and accounts for any text
+ * preceding the region's start on its line, matching GNU Emacs untabify.
+ * Mark is cleared afterwards.
+ */
+int
+untabifyregion(int f, int n)
+{
+	struct region	 region;
+	struct line	*linep;
+	int		 loffs, lineno, col, c, spaces, remaining, i, s;
+
+	if (curwp->w_markp == NULL) {
+		dobeep();
+		ewprintf("The mark is not set now, so there is no region");
+		return (FALSE);
+	}
+	if ((s = checkdirty(curbp)) != TRUE)
+		return (s);
+	if (curbp->b_flag & BFREADONLY) {
+		dobeep();
+		ewprintf("Buffer is read-only");
+		return (FALSE);
+	}
+	if ((s = getregion(&region)) != TRUE)
+		return (s);
+
+	curwp->w_dotp = region.r_linep;
+	curwp->w_doto = region.r_offset;
+	curwp->w_dotline = region.r_lineno;
+
+	linep = region.r_linep;
+	loffs = region.r_offset;
+	lineno = region.r_lineno;
+
+	/* Visual column at the region's starting offset on its line. */
+	col = 0;
+	for (i = 0; i < loffs; i++) {
+		c = lgetc(linep, i);
+		if (c == '\t')
+			col = ntabstop(col, curbp->b_tabw);
+		else
+			col++;
+	}
+
+	remaining = (int)region.r_size;
+	while (remaining > 0) {
+		if (loffs == llength(linep)) {
+			linep = lforw(linep);
+			loffs = 0;
+			lineno++;
+			col = 0;
+			remaining--;
+			continue;
+		}
+		c = lgetc(linep, loffs);
+		if (c == '\t') {
+			spaces = ntabstop(col, curbp->b_tabw) - col;
+			curwp->w_dotp = linep;
+			curwp->w_doto = loffs;
+			curwp->w_dotline = lineno;
+			if ((s = ldelete(1, KNONE)) != TRUE)
+				return (s);
+			if (spaces > 0) {
+				if ((s = linsert(spaces, ' ')) != TRUE)
+					return (s);
+			}
+			loffs += spaces;
+			col += spaces;
+		} else {
+			loffs++;
+			col++;
+		}
+		remaining--;
+	}
+
+	clearmark(FFARG, 0);
+	return (TRUE);
+}
+
+/*
  * This routine figures out the bound of the region in the current window,
  * and stores the results into the fields of the REGION structure. Dot and
  * mark are usually close together, but I don't know the order, so I scan
