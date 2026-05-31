@@ -618,18 +618,20 @@ update(int modelinecolor)
 	hflag = FALSE;			/* Not hard. */
 	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
 		/*
+		 * Active region: in-line moves (backchar/forwchar/gotobol/
+		 * gotoeol) set no rflag, so dot can shift without us being
+		 * told. Force WFFULL whenever mark is set so reset_row_attr
+		 * clears stale attrs from cells that left the region before
+		 * paint_region re-stamps the current region.
+		 */
+		if (wp->w_markp != NULL)
+			wp->w_rflag |= WFFULL;
+
+		/*
 		 * Nothing to be done.
 		 */
 		if (wp->w_rflag == 0)
 			continue;
-
-		/*
-		 * Active region: any movement may shift highlight bounds,
-		 * so force a full window repaint so paint_region overlays
-		 * fresh attrs across all visible rows.
-		 */
-		if (wp->w_markp != NULL && (wp->w_rflag & WFMOVE))
-			wp->w_rflag |= WFFULL;
 
 		if ((wp->w_rflag & WFFRAME) == 0) {
 			lp = wp->w_linep;
