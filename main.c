@@ -348,10 +348,13 @@ quit(int f, int n)
 
 /*
  * User abort.  Should be called by any input routine that sees a C-g to abort
- * whatever C-g is aborting these days. Currently does nothing.
+ * whatever C-g is aborting these days.  Also deactivates the region by
+ * clearing the mark, matching emacs's C-g behavior.
  */
 int
 ctrlg(int f, int n)
 {
+	if (curwp != NULL && curwp->w_markp != NULL)
+		(void)clearmark(0, 0);
 	return (ABORT);
 }

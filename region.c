@@ -36,6 +36,42 @@ static	int	shellcmdoutput(char * const, char * const, int,
 		    struct buffer *);
 
 /*
+ * Is the mark set and the region between dot and mark non-empty?
+ * Used by backspace/delete to decide whether to operate on the region.
+ */
+int
+region_active_nonempty(void)
+{
+	if (curwp->w_markp == NULL)
+		return (FALSE);
+	if (curwp->w_markp == curwp->w_dotp &&
+	    curwp->w_marko == curwp->w_doto)
+		return (FALSE);
+	return (TRUE);
+}
+
+/*
+ * Delete the region without saving to the kill ring (cf. killregion).
+ * Mark is cleared afterwards.  Recoverable only via undo.
+ */
+int
+deleteregion(int f, int n)
+{
+	struct region	region;
+	int		s;
+
+	if ((s = getregion(&region)) != TRUE)
+		return (s);
+	curwp->w_dotp = region.r_linep;
+	curwp->w_doto = region.r_offset;
+	curwp->w_dotline = region.r_lineno;
+	s = ldelete(region.r_size, KNOTKILL);
+	clearmark(FFARG, 0);
+
+	return (s);
+}
+
+/*
  * Kill the region.  Ask "getregion" to figure out the bounds of the region.
  * Move "." to the start, and kill the characters. Mark is cleared afterwards.
  */

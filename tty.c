@@ -400,7 +400,7 @@ ttcolor(int color)
 		if (color == CTEXT)
 			/* normal video */
 			putpad(exit_standout_mode, 1);
-		else if (color == CMODE)
+		else if (color == CMODE || color == CHILIGHT)
 			/* reverse video */
 			putpad(enter_standout_mode, 1);
 		/* save the color */

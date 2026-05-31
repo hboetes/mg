@@ -36,6 +36,7 @@ struct video {
 	short	v_lend;		/* Split column; 0 = single-color row	 */
 	int	v_cost;		/* Cost of display.		 */
 	char	*v_text;	/* The actual characters.	 */
+	char	*v_attr;	/* Per-column color attr (CTEXT/CHILIGHT) */
 };
 
 #define VFCHG	0x0001			/* Changed.			 */
@@ -67,10 +68,15 @@ void	ucopy(struct video *, struct video *);
 void	uline(int, struct video *, struct video *);
 void	hash(struct video *);
 
+static void	reset_row_attr(int);
+static void	paint_region(struct mgwin *);
+static int	dispcol(struct line *, int, int);
+static int	effcolor(struct video *, int);
 
 int	sgarbf = TRUE;		/* TRUE if screen is garbage.	 */
 int	vtrow = HUGE;		/* Virtual cursor row.		 */
 int	vtcol = HUGE;		/* Virtual cursor column.	 */
+static int vtattr = CTEXT;	/* Current paint attribute for vtputc.	*/
 int	tthue = CNONE;		/* Current color.		 */
 int	ttrow = HUGE;		/* Physical cursor row.		 */
 int	ttcol = HUGE;		/* Physical cursor column.	 */
@@ -188,6 +194,8 @@ vtresize(int force, int newrow, int newcol)
 			for (i = 2 * (newrow - 1); i < 2 * (nrow - 1); i++) {
 				free(video[i].v_text);
 				video[i].v_text = NULL;
+				free(video[i].v_attr);
+				video[i].v_attr = NULL;
 			}
 		}
 
@@ -214,9 +222,14 @@ vtresize(int force, int newrow, int newcol)
 		}
 	}
 	if (rowchanged || colchanged || first_run) {
-		for (i = 0; i < 2 * (newrow - 1); i++)
+		for (i = 0; i < 2 * (newrow - 1); i++) {
 			TRYREALLOC(video[i].v_text, newcol);
+			TRYREALLOC(video[i].v_attr, newcol);
+			memset(video[i].v_attr, CTEXT, newcol);
+		}
 		TRYREALLOC(blanks.v_text, newcol);
+		TRYREALLOC(blanks.v_attr, newcol);
+		memset(blanks.v_attr, CTEXT, newcol);
 	}
 
 	nrow = newrow;
@@ -318,9 +331,11 @@ vtputc(int c, struct mgwin *wp)
 	c &= 0xff;
 
 	vp = vscreen[vtrow];
-	if (vtcol >= right)
+	if (vtcol >= right) {
 		vp->v_text[right - 1] = '$';
-	else if (c == '\t') {
+		if (vp->v_attr != NULL)
+			vp->v_attr[right - 1] = vtattr;
+	} else if (c == '\t') {
 		target = ntabstop(vtcol - wp->w_leftcol, wp->w_bufp->b_tabw);
 		do {
 			vtputc(' ', wp);
@@ -328,9 +343,11 @@ vtputc(int c, struct mgwin *wp)
 	} else if (ISCTRL(c)) {
 		vtputc('^', wp);
 		vtputc(CCHR(c), wp);
-	} else if (isprint(c))
+	} else if (isprint(c)) {
+		if (vp->v_attr != NULL)
+			vp->v_attr[vtcol] = vtattr;
 		vp->v_text[vtcol++] = c;
-	else {
+	} else {
 		char bf[5];
 
 		snprintf(bf, sizeof(bf), "\\%o", c);
@@ -354,9 +371,11 @@ vtpute(int c, struct mgwin *wp)
 	c &= 0xff;
 
 	vp = vscreen[vtrow];
-	if (vtcol >= right)
+	if (vtcol >= right) {
 		vp->v_text[right - 1] = '$';
-	else if (c == '\t') {
+		if (vp->v_attr != NULL)
+			vp->v_attr[right - 1] = vtattr;
+	} else if (c == '\t') {
 		target = ntabstop(textcol, wp->w_bufp->b_tabw);
 		do {
 			vtpute(' ', wp);
@@ -366,8 +385,11 @@ vtpute(int c, struct mgwin *wp)
 		vtpute('^', wp);
 		vtpute(CCHR(c), wp);
 	} else if (isprint(c)) {
-		if (vtcol >= wp->w_leftcol)
+		if (vtcol >= wp->w_leftcol) {
 			vp->v_text[vtcol] = c;
+			if (vp->v_attr != NULL)
+				vp->v_attr[vtcol] = vtattr;
+		}
 		++vtcol;
 	} else {
 		char bf[5], *cp;
@@ -390,8 +412,155 @@ vteeol(struct mgwin *wp)
 	int right = WRIGHT(wp);
 
 	vp = vscreen[vtrow];
-	while (vtcol < right)
+	while (vtcol < right) {
+		if (vp->v_attr != NULL)
+			vp->v_attr[vtcol] = vtattr;
 		vp->v_text[vtcol++] = ' ';
+	}
+}
+
+/*
+ * Reset a row's per-column attribute buffer to CTEXT.  Called before
+ * laying out a row's text so paint_region can overlay highlight cleanly.
+ */
+static void
+reset_row_attr(int row)
+{
+	if (vscreen[row]->v_attr != NULL)
+		memset(vscreen[row]->v_attr, CTEXT, ncol);
+}
+
+/*
+ * Compute the display column corresponding to buffer offset `off` on `lp`.
+ * Mirrors the tab / control-char / unprintable expansion used by vtputc
+ * and getcolpos.
+ */
+static int
+dispcol(struct line *lp, int off, int tabw)
+{
+	int	col = 0, i, c;
+	char	tmp[5];
+
+	if (off > llength(lp))
+		off = llength(lp);
+	for (i = 0; i < off; i++) {
+		c = lgetc(lp, i);
+		if (c == '\t')
+			col = ntabstop(col, tabw);
+		else if (ISCTRL(c) != FALSE)
+			col += 2;
+		else if (isprint(c))
+			col++;
+		else
+			col += snprintf(tmp, sizeof(tmp), "\\%o", c);
+	}
+	return (col);
+}
+
+/*
+ * Paint the active region in window `wp` by overlaying CHILIGHT into
+ * v_attr for cells inside the region.  Called per window per redisplay
+ * after the row text has been laid out by update().
+ */
+static void
+paint_region(struct mgwin *wp)
+{
+	struct line	*lp, *sl, *el;
+	int		 slo, elo, sln, eln;
+	int		 i, srow, in_region, tabw;
+	int		 lcol, lbnd, right;
+	int		 rstart, rend, c;
+	int		 sc_abs, ec_abs;
+	int		 llen_col;
+
+	if (wp->w_markp == NULL)
+		return;
+
+	/* Empty region: nothing to highlight. */
+	if (wp->w_markp == wp->w_dotp && wp->w_marko == wp->w_doto)
+		return;
+
+	tabw = wp->w_bufp->b_tabw;
+	lcol = wp->w_leftcol;
+	lbnd = wp->w_lbound;
+	right = WRIGHT(wp);
+
+	/* Normalize so (sl,slo,sln) is start <= (el,elo,eln) is end. */
+	if (wp->w_markline < wp->w_dotline ||
+	    (wp->w_markline == wp->w_dotline &&
+	     wp->w_marko < wp->w_doto)) {
+		sl = wp->w_markp; slo = wp->w_marko; sln = wp->w_markline;
+		el = wp->w_dotp;  elo = wp->w_doto;  eln = wp->w_dotline;
+	} else {
+		sl = wp->w_dotp;  slo = wp->w_doto;  sln = wp->w_dotline;
+		el = wp->w_markp; elo = wp->w_marko; eln = wp->w_markline;
+	}
+	(void)sln; (void)eln;
+
+	lp = wp->w_linep;
+	in_region = 0;
+	for (i = 0; i < wp->w_ntrows; i++) {
+		srow = wp->w_toprow + i;
+		if (lp == wp->w_bufp->b_headp)
+			break;
+		/* Skip rows that aren't plain text (modeline shouldn't be
+		 * inside the text-row range, but stay safe). */
+		if (vscreen[srow]->v_color != CTEXT ||
+		    vscreen[srow]->v_lend != 0)
+			goto next;
+
+		if (!in_region && lp == sl)
+			in_region = 1;
+
+		if (in_region) {
+			llen_col = dispcol(lp, llength(lp), tabw);
+			if (lp == sl && lp == el) {
+				rstart = dispcol(lp, slo, tabw);
+				rend   = dispcol(lp, elo, tabw);
+			} else if (lp == sl) {
+				rstart = dispcol(lp, slo, tabw);
+				rend   = llen_col + 1; /* incl newline cell */
+			} else if (lp == el) {
+				rstart = 0;
+				rend   = dispcol(lp, elo, tabw);
+			} else {
+				rstart = 0;
+				rend   = llen_col + 1;
+			}
+
+			sc_abs = lcol + rstart - lbnd;
+			ec_abs = lcol + rend   - lbnd;
+			if (sc_abs < lcol)
+				sc_abs = lcol;
+			if (ec_abs > right)
+				ec_abs = right;
+			if (vscreen[srow]->v_attr != NULL) {
+				for (c = sc_abs; c < ec_abs; c++)
+					vscreen[srow]->v_attr[c] = CHILIGHT;
+			}
+		}
+
+		if (lp == el)
+			in_region = 0;
+next:
+		lp = lforw(lp);
+	}
+}
+
+/*
+ * Effective per-column color for `vp` at `col`.  Honors split-color rows
+ * (v_lend), row-level color (v_color), or falls through to per-cell v_attr.
+ */
+static int
+effcolor(struct video *vp, int col)
+{
+	if (vp->v_lend > 0)
+		return (col < vp->v_lend ? vp->v_lcolor : vp->v_color);
+	if (vp->v_color != CTEXT)
+		return (vp->v_color);
+	if (vp->v_attr == NULL)
+		return (CTEXT);
+	return (vp->v_attr[col]);
 }
 
 /*
@@ -454,6 +623,14 @@ update(int modelinecolor)
 		if (wp->w_rflag == 0)
 			continue;
 
+		/*
+		 * Active region: any movement may shift highlight bounds,
+		 * so force a full window repaint so paint_region overlays
+		 * fresh attrs across all visible rows.
+		 */
+		if (wp->w_markp != NULL && (wp->w_rflag & WFMOVE))
+			wp->w_rflag |= WFFULL;
+
 		if ((wp->w_rflag & WFFRAME) == 0) {
 			lp = wp->w_linep;
 			for (i = 0; i < wp->w_ntrows; ++i) {
@@ -500,6 +677,8 @@ update(int modelinecolor)
 			vscreen[i]->v_color = CTEXT;
 			vscreen[i]->v_lend = 0;
 			vscreen[i]->v_flag |= (VFCHG | VFHBAD);
+			reset_row_attr(i);
+			vtattr = CTEXT;
 			vtmove(i, wp->w_leftcol);
 			for (j = 0; j < llength(lp); ++j)
 				vtputc(lgetc(lp, j), wp);
@@ -510,6 +689,8 @@ update(int modelinecolor)
 				vscreen[i]->v_color = CTEXT;
 				vscreen[i]->v_lend = 0;
 				vscreen[i]->v_flag |= (VFCHG | VFHBAD);
+				reset_row_attr(i);
+				vtattr = CTEXT;
 				vtmove(i, wp->w_leftcol);
 				if (lp != wp->w_bufp->b_headp) {
 					for (j = 0; j < llength(lp); ++j)
@@ -586,6 +767,23 @@ update(int modelinecolor)
 			vscreen[i]->v_flag |= VFCHG;
 		/* and onward to the next window */
 		wp = wp->w_wndp;
+	}
+
+	/*
+	 * Overlay region highlight AFTER updext / de-extend so those paths
+	 * don't clobber v_attr.  Force VFCHG and recompute hash on any row
+	 * we touched so the screen-paint engine emits the changes.
+	 */
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		int rmin, rmax;
+		paint_region(wp);
+		if (wp->w_markp == NULL)
+			continue;
+		rmin = wp->w_toprow;
+		rmax = wp->w_toprow + wp->w_ntrows;
+		for (i = rmin; i < rmax && i < nrow - 1; i++) {
+			vscreen[i]->v_flag |= (VFCHG | VFHBAD);
+		}
 	}
 
 	if (sgarbf != FALSE) {	/* Screen is garbage.	 */
@@ -675,6 +873,8 @@ ucopy(struct video *vvp, struct video *pvp)
 	pvp->v_cost = vvp->v_cost;
 	pvp->v_color = vvp->v_color;
 	bcopy(vvp->v_text, pvp->v_text, ncol);
+	if (vvp->v_attr != NULL && pvp->v_attr != NULL)
+		bcopy(vvp->v_attr, pvp->v_attr, ncol);
 }
 
 /*
@@ -722,12 +922,7 @@ updext(int currow, int curcol, struct mgwin *wp)
 void
 uline(int row, struct video *vvp, struct video *pvp)
 {
-	char  *cp1;
-	char  *cp2;
-	char  *cp3;
-	char  *cp4;
-	char  *cp5;
-	int    nbflag;
+	int	left, right, i, ec, cur_color;
 
 	/*
 	 * Split-color row (vertical-split modeline): paint two color regions
@@ -736,91 +931,50 @@ uline(int row, struct video *vvp, struct video *pvp)
 	if (vvp->v_lend > 0) {
 		ttmove(row, 0);
 		ttcolor(vvp->v_lcolor);
-		cp1 = &vvp->v_text[0];
-		cp2 = &vvp->v_text[vvp->v_lend];
-		while (cp1 != cp2) {
-			ttputc(*cp1++);
+		for (i = 0; i < vvp->v_lend; i++) {
+			ttputc(vvp->v_text[i]);
 			++ttcol;
 		}
 		ttcolor(vvp->v_color);
-		cp2 = &vvp->v_text[ncol];
-		while (cp1 != cp2) {
-			ttputc(*cp1++);
+		for (i = vvp->v_lend; i < ncol; i++) {
+			ttputc(vvp->v_text[i]);
 			++ttcol;
 		}
 		ttcolor(CTEXT);
 		return;
 	}
 
-	if (vvp->v_color != pvp->v_color) {	/* Wrong color, do a	 */
-		ttmove(row, 0);			/* full redraw.		 */
-#ifdef	STANDOUT_GLITCH
-		if (pvp->v_color != CTEXT && magic_cookie_glitch >= 0)
-			tteeol();
-#endif
-		ttcolor(vvp->v_color);
-#ifdef	STANDOUT_GLITCH
-		cp1 = &vvp->v_text[magic_cookie_glitch > 0 ? magic_cookie_glitch : 0];
-		/*
-		 * The odd code for magic_cookie_glitch==0 is to avoid
-		 * putting the invisible glitch character on the next line.
-		 * (Hazeltine executive 80 model 30)
-		 */
-		cp2 = &vvp->v_text[ncol - (magic_cookie_glitch >= 0 ?
-		    (magic_cookie_glitch != 0 ? magic_cookie_glitch : 1) : 0)];
-#else
-		cp1 = &vvp->v_text[0];
-		cp2 = &vvp->v_text[ncol];
-#endif
-		while (cp1 != cp2) {
-			ttputc(*cp1++);
-			++ttcol;
+	/*
+	 * Attr-aware incremental paint.  Match left and right edges by text
+	 * AND effective per-column color; repaint the changed middle while
+	 * emitting ttcolor() transitions on color boundaries.
+	 */
+	left = 0;
+	while (left < ncol &&
+	    vvp->v_text[left] == pvp->v_text[left] &&
+	    effcolor(vvp, left) == effcolor(pvp, left))
+		left++;
+	if (left == ncol)
+		return;
+
+	right = ncol;
+	while (right > left &&
+	    vvp->v_text[right - 1] == pvp->v_text[right - 1] &&
+	    effcolor(vvp, right - 1) == effcolor(pvp, right - 1))
+		right--;
+
+	ttmove(row, left);
+	cur_color = tthue;
+	for (i = left; i < right; i++) {
+		ec = effcolor(vvp, i);
+		if (ec != cur_color) {
+			ttcolor(ec);
+			cur_color = ec;
 		}
-		ttcolor(CTEXT);
-		return;
-	}
-	cp1 = &vvp->v_text[0];		/* Compute left match.	 */
-	cp2 = &pvp->v_text[0];
-	while (cp1 != &vvp->v_text[ncol] && cp1[0] == cp2[0]) {
-		++cp1;
-		++cp2;
-	}
-	if (cp1 == &vvp->v_text[ncol])	/* All equal.		 */
-		return;
-	nbflag = FALSE;
-	cp3 = &vvp->v_text[ncol];	/* Compute right match.  */
-	cp4 = &pvp->v_text[ncol];
-	while (cp3[-1] == cp4[-1]) {
-		--cp3;
-		--cp4;
-		if (cp3[0] != ' ')	/* Note non-blanks in	 */
-			nbflag = TRUE;	/* the right match.	 */
-	}
-	cp5 = cp3;			/* Is erase good?	 */
-	if (nbflag == FALSE && vvp->v_color == CTEXT) {
-		while (cp5 != cp1 && cp5[-1] == ' ')
-			--cp5;
-		/* Alcyon hack */
-		if ((int) (cp3 - cp5) <= tceeol)
-			cp5 = cp3;
-	}
-	/* Alcyon hack */
-	ttmove(row, (int) (cp1 - &vvp->v_text[0]));
-#ifdef	STANDOUT_GLITCH
-	if (vvp->v_color != CTEXT && magic_cookie_glitch > 0) {
-		if (cp1 < &vvp->v_text[magic_cookie_glitch])
-			cp1 = &vvp->v_text[magic_cookie_glitch];
-		if (cp5 > &vvp->v_text[ncol - magic_cookie_glitch])
-			cp5 = &vvp->v_text[ncol - magic_cookie_glitch];
-	} else if (magic_cookie_glitch < 0)
-#endif
-		ttcolor(vvp->v_color);
-	while (cp1 != cp5) {
-		ttputc(*cp1++);
+		ttputc(vvp->v_text[i]);
 		++ttcol;
 	}
-	if (cp5 != cp3)			/* Do erase.		 */
-		tteeol();
+	ttcolor(CTEXT);
 }
 
 /*
@@ -1023,6 +1177,10 @@ hash(struct video *vp)
 			n = (n << 5) + n + *s;
 		n = (n << 5) + n + vp->v_lend;	/* Fold in color-split	 */
 		n = (n << 5) + n + vp->v_lcolor;
+		if (vp->v_attr != NULL) {	/* Fold in per-col attrs */
+			for (i = 0; i < ncol; i++)
+				n = (n << 5) + n + vp->v_attr[i];
+		}
 		vp->v_hash = n;			/* Hash code.		 */
 		vp->v_flag &= ~VFHBAD;		/* Flag as all done.	 */
 	}

@@ -79,6 +79,7 @@ typedef int	(*PF)(int, int);	/* generally useful type */
 #define CNONE	0		/* Unknown color.		 */
 #define CTEXT	1		/* Text color.			 */
 #define CMODE	2		/* Mode line color.		 */
+#define CHILIGHT 3		/* Active-region highlight.	 */
 
 /*
  * Flags for keyboard invoked functions.
@@ -108,6 +109,7 @@ typedef int	(*PF)(int, int);	/* generally useful type */
 #define KFORW	0x01		/* forward insert into kill ring */
 #define KBACK	0x02		/* Backwards insert into kill ring */
 #define KREG	0x04		/* This is a region-based kill */
+#define KNOTKILL 0x08		/* explicit: never push to kill ring	*/
 
 #define MAX_TOKEN 64
 
@@ -656,6 +658,8 @@ int		 transposeword(int, int);
 /* region.c X */
 int		 killregion(int, int);
 int		 copyregion(int, int);
+int		 deleteregion(int, int);
+int		 region_active_nonempty(void);
 int		 lowerregion(int, int);
 int		 upperregion(int, int);
 int		 prefixregion(int, int);

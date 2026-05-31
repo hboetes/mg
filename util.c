@@ -444,6 +444,9 @@ forwdel(int f, int n)
 	if (n < 0)
 		return (backdel(f | FFRAND, -n));
 
+	if (!(f & (FFARG | FFRAND)) && region_active_nonempty())
+		return (deleteregion(f, n));
+
 	/* really a kill */
 	if (f & FFARG) {
 		if ((lastflag & CFKILL) == 0)
@@ -466,6 +469,9 @@ backdel(int f, int n)
 
 	if (n < 0)
 		return (forwdel(f | FFRAND, -n));
+
+	if (!(f & (FFARG | FFRAND)) && region_active_nonempty())
+		return (deleteregion(f, n));
 
 	/* really a kill */
 	if (f & FFARG) {

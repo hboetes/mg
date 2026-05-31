@@ -115,6 +115,9 @@ kremove(int n)
 int
 kchunk(char *cp1, RSIZE chunk, int kflag)
 {
+	/* Explicit no-kill: bypass the kill ring entirely. */
+	if (kflag & KNOTKILL)
+		return (TRUE);
 	/*
 	 * HACK - doesn't matter, and fixes back-over-nl bug for empty
 	 *	kill buffers.
