@@ -157,10 +157,22 @@ main(int argc, char **argv)
 		extern void grep_init(void);
 		extern void cmode_init(void);
 		extern void dired_init(void);
+		extern void makemode_init(void);
 
 		dired_init();
 		grep_init();
 		cmode_init();
+		makemode_init();
+
+		add_autoexec("Makefile",        "makefile-mode");
+		add_autoexec("*/Makefile",      "makefile-mode");
+		add_autoexec("makefile",        "makefile-mode");
+		add_autoexec("*/makefile",      "makefile-mode");
+		add_autoexec("GNUmakefile",     "makefile-mode");
+		add_autoexec("*/GNUmakefile",   "makefile-mode");
+		add_autoexec("BSDmakefile",     "makefile-mode");
+		add_autoexec("*/BSDmakefile",   "makefile-mode");
+		add_autoexec("*.mk",            "makefile-mode");
 	}
 
 	if (init_fcn_name &&
