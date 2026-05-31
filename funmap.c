@@ -106,6 +106,7 @@ static struct funmap functnames[] = {
 	{gotoeob, "end-of-buffer", 0},
 	{gotoeol, "end-of-line", 0},
 	{enlargewind, "enlarge-window", 0},
+	{enlargewind_horiz, "enlarge-window-horizontally", 0},
 	{NULL, "esc prefix", 0},			/* internal	*/
 	{evalbuffer, "eval-current-buffer", 0},
 	{evalexpr, "eval-expression", 0},
@@ -211,6 +212,7 @@ static struct funmap functnames[] = {
 	{shellcommand, "shell-command", 1},
 	{piperegion, "shell-command-on-region", 1},
 	{shrinkwind, "shrink-window", 1},
+	{shrinkwind_horiz, "shrink-window-horizontally", 0},
 	{space_to_tabstop, "space-to-tabstop", 0},
 	{splitwind_horiz, "split-window-horizontally", 0},
 	{splitwind, "split-window-vertically", 0},

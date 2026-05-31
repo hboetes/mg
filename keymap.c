@@ -191,9 +191,15 @@ static PF cXcar[] = {
 	undo			/* u */
 };
 
-struct KEYMAPE (6) cXmap = {
-	6,
-	6,
+static PF cXbrace[] = {
+	shrinkwind_horiz,	/* { */
+	rescan,			/* | */
+	enlargewind_horiz	/* } */
+};
+
+struct KEYMAPE (7) cXmap = {
+	7,
+	7,
 	rescan,
 	{
 		{
@@ -213,6 +219,9 @@ struct KEYMAPE (6) cXmap = {
 		},
 		{
 			'^', 'u', cXcar, NULL
+		},
+		{
+			'{', '}', cXbrace, NULL
 		}
 	}
 };

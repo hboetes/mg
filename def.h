@@ -452,6 +452,8 @@ int		 splitwind(int, int);
 int		 splitwind_horiz(int, int);
 int		 enlargewind(int, int);
 int		 shrinkwind(int, int);
+int		 enlargewind_horiz(int, int);
+int		 shrinkwind_horiz(int, int);
 int		 delwind(int, int);
 
 /* buffer.c */

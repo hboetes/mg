@@ -776,6 +776,154 @@ splitwind_horiz(int f, int n)
 }
 
 /*
+ * Shared band-resize worker for horizontal enlarge/shrink. A positive
+ * delta grows curwp's column band by that many text columns; a negative
+ * delta shrinks it. The adjacent band (right neighbor preferred, falling
+ * back to left) gives up or gains the corresponding columns.
+ *
+ * All windows in curwp's band update uniformly, and likewise for the
+ * neighbor band, so the layout stays consistent. Bands are keyed by
+ * (w_leftcol, w_ncols). The deleted/granted column count is folded into
+ * each band's w_propw so future SIGWINCH resizes keep the new
+ * proportions.
+ *
+ * Refuses if either band would drop below MIN_WCOLS, or if the neighbor
+ * candidates don't share a consistent (leftcol, ncols).
+ */
+static int
+resize_horiz(int delta)
+{
+	struct mgwin	*iter;
+	struct mgwin	*nbr[64];
+	int		 n_nbr = 0;
+	int		 max_nbr = (int)(sizeof(nbr) / sizeof(nbr[0]));
+	int		 cur_left = curwp->w_leftcol;
+	int		 cur_ncols = curwp->w_ncols;
+	int		 cur_right = cur_left + cur_ncols;
+	int		 nbr_left, nbr_ncols;
+	int		 neighbor_on_right;
+	int		 cur_propw_old, nbr_propw_old;
+	int		 total_propw, total_cols;
+	int		 new_cur_propw, new_nbr_propw;
+	int		 j;
+
+	if (delta == 0)
+		return (TRUE);
+
+	for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+		if (iter == curwp)
+			continue;
+		if (iter->w_leftcol == cur_right + 1 && n_nbr < max_nbr)
+			nbr[n_nbr++] = iter;
+	}
+	neighbor_on_right = (n_nbr > 0);
+	if (n_nbr == 0) {
+		for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+			if (iter == curwp)
+				continue;
+			if (iter->w_leftcol + iter->w_ncols + 1 == cur_left &&
+			    n_nbr < max_nbr)
+				nbr[n_nbr++] = iter;
+		}
+	}
+	if (n_nbr == 0) {
+		dobeep();
+		ewprintf("No adjacent column band");
+		return (FALSE);
+	}
+
+	nbr_left = nbr[0]->w_leftcol;
+	nbr_ncols = nbr[0]->w_ncols;
+	for (j = 1; j < n_nbr; j++) {
+		if (nbr[j]->w_leftcol != nbr_left ||
+		    nbr[j]->w_ncols != nbr_ncols) {
+			dobeep();
+			ewprintf("Adjacent layout inconsistent");
+			return (FALSE);
+		}
+	}
+
+	if (delta > 0) {
+		if (nbr_ncols - delta < MIN_WCOLS) {
+			dobeep();
+			ewprintf("Impossible change");
+			return (FALSE);
+		}
+	} else {
+		if (cur_ncols + delta < MIN_WCOLS) {
+			dobeep();
+			ewprintf("Impossible change");
+			return (FALSE);
+		}
+	}
+
+	cur_propw_old = curwp->w_propw;
+	nbr_propw_old = nbr[0]->w_propw;
+	total_propw = cur_propw_old + nbr_propw_old;
+	total_cols = cur_ncols + nbr_ncols;
+	if (total_cols < 1)
+		total_cols = 1;
+	new_cur_propw = (int)(((long long)total_propw *
+	    (cur_ncols + delta) + total_cols / 2) / total_cols);
+	new_nbr_propw = total_propw - new_cur_propw;
+	if (new_cur_propw < 1)
+		new_cur_propw = 1;
+	if (new_nbr_propw < 1)
+		new_nbr_propw = 1;
+
+	for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+		if (iter->w_leftcol == cur_left &&
+		    iter->w_ncols == cur_ncols) {
+			iter->w_ncols += delta;
+			iter->w_propw = new_cur_propw;
+			if (!neighbor_on_right)
+				iter->w_leftcol -= delta;
+			iter->w_lbound = 0;
+			iter->w_rflag |= WFMODE | WFFULL;
+		}
+	}
+	for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+		if (iter->w_leftcol == nbr_left &&
+		    iter->w_ncols == nbr_ncols) {
+			iter->w_ncols -= delta;
+			iter->w_propw = new_nbr_propw;
+			if (neighbor_on_right)
+				iter->w_leftcol += delta;
+			iter->w_lbound = 0;
+			iter->w_rflag |= WFMODE | WFFULL;
+		}
+	}
+
+	sgarbf = TRUE;
+	return (TRUE);
+}
+
+/*
+ * enlarge-window-horizontally: grow the current window's column band by
+ * n columns at the expense of an adjacent band. Defaults to growing
+ * rightward; with no right neighbor, grows leftward.
+ */
+int
+enlargewind_horiz(int f, int n)
+{
+	if (n < 0)
+		return (shrinkwind_horiz(f, -n));
+	return (resize_horiz(n));
+}
+
+/*
+ * shrink-window-horizontally: shrink the current window's column band by
+ * n columns, giving them to an adjacent band.
+ */
+int
+shrinkwind_horiz(int f, int n)
+{
+	if (n < 0)
+		return (enlargewind_horiz(f, -n));
+	return (resize_horiz(-n));
+}
+
+/*
  * Enlarge the current window.  Find the window that loses space.  Make sure
  * it is big enough.  If so, hack the window descriptions, and ask redisplay
  * to do all the hard work.  You don't just set "force reframe" because dot
