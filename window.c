@@ -62,145 +62,109 @@ reposition(int f, int n)
 #define MIN_WCOLS	8
 
 /*
- * Proportionally rescale every window's column geometry to a new terminal
- * width using each band's STABLE logical weight (w_propw). Because propw
- * never changes during SIGWINCH-driven resizes, the result of "rescale
- * 80 -> 200 in one shot" equals the result of "80 -> 81 -> ... -> 200 in
- * many tiny steps". This matches how GNU Emacs distributes a frame resize:
- * each window's logical share of the parent stays fixed; only the pixel
- * projection of that share changes.
+ * Rescale the column geometry of every window in one row strip.
  *
- * Algorithm (largest-remainder / Hamilton method):
- *   1. Identify unique bands (windows sharing a w_leftcol). Sort left-to-
- *      right by w_leftcol.
- *   2. Total propw = sum of unique band weights. If any band has propw=0
- *      (legacy or unset), bootstrap from its current w_ncols.
- *   3. usable_new = newncol - (nbands - 1) divider columns.
- *   4. Floor allocation per band: floor(propw * usable_new / total_propw).
- *      Clamp to MIN_WCOLS.
- *   5. Distribute leftover columns to bands with the largest fractional
- *      remainders, breaking ties by giving extra to the band with the
- *      smallest current allocation (so growth is symmetric on round
- *      trips and not biased to one side).
- *   6. Lay out left-to-right with one-column dividers and propagate to
- *      every window in each band.
+ * A row strip is a maximal contiguous range of rows where the set of
+ * active windows is constant. Within a strip, the column layout is a
+ * linear sequence of bands, each band being a unique (w_leftcol,
+ * w_ncols). All windows in the same band share w_propw.
  *
- * If usable_new can't accommodate nbands * MIN_WCOLS, collapses all
- * vertical splits to a single full-width column.
+ * Uses each band's logical weight (w_propw) — stable across SIGWINCH
+ * resizes — to compute new widths via the largest-remainder method,
+ * then assigns new leftcols left-to-right with one-column dividers
+ * between bands.
+ *
+ * Old (leftcol, ncols, propw) values are passed in via the parallel
+ * arrays so multi-strip windows can be looked up consistently from
+ * snapshots taken before any strip processing has started.
  */
 static void
-rescale_columns(int oldncol, int newncol)
+rescale_strip(struct mgwin **active, int *act_idx, int n_active,
+    int *old_leftcol, int *old_ncols, int *old_propw, int newncol)
 {
-	struct mgwin	*wp;
-	int		 band_leftcol_old[64];
-	int		 band_propw[64];
-	int		 band_oldw[64];
-	int		 band_neww[64];
-	int		 band_newleft[64];
+	int		 b_left[64], b_ncols[64], b_propw[64];
+	int		 b_neww[64], b_newleft[64];
+	long long	 b_frac[64];
 	int		 order[64];
-	long long	 frac[64];
-	int		 nbands = 0;
+	int		 n_bands = 0;
 	int		 i, j;
-	int		 usable_new, total_propw, used, rem;
+	long long	 total_propw;
+	int		 usable_new, used, rem;
 
-	(void)oldncol;
-
-	/* Step 1: identify unique bands by w_leftcol. */
-	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+	for (i = 0; i < n_active; i++) {
+		int idx = act_idx[i];
 		int dup = FALSE;
 
-		for (i = 0; i < nbands; i++)
-			if (band_leftcol_old[i] == wp->w_leftcol) {
+		for (j = 0; j < n_bands; j++) {
+			if (b_left[j] == old_leftcol[idx] &&
+			    b_ncols[j] == old_ncols[idx]) {
 				dup = TRUE;
 				break;
 			}
-		if (!dup && nbands < (int)(sizeof(band_leftcol_old) /
-		    sizeof(band_leftcol_old[0]))) {
-			band_leftcol_old[nbands] = wp->w_leftcol;
-			band_propw[nbands] = wp->w_propw;
-			band_oldw[nbands] = wp->w_ncols;
-			nbands++;
+		}
+		if (!dup && n_bands < 64) {
+			b_left[n_bands] = old_leftcol[idx];
+			b_ncols[n_bands] = old_ncols[idx];
+			b_propw[n_bands] = old_propw[idx];
+			n_bands++;
 		}
 	}
 
-	/* Sort bands left-to-right. */
-	for (i = 1; i < nbands; i++) {
-		int kl = band_leftcol_old[i];
-		int kp = band_propw[i];
-		int kw = band_oldw[i];
+	for (i = 1; i < n_bands; i++) {
+		int kl = b_left[i], kn = b_ncols[i], kp = b_propw[i];
 
-		for (j = i - 1; j >= 0 && band_leftcol_old[j] > kl; j--) {
-			band_leftcol_old[j+1] = band_leftcol_old[j];
-			band_propw[j+1] = band_propw[j];
-			band_oldw[j+1] = band_oldw[j];
+		for (j = i - 1; j >= 0 && b_left[j] > kl; j--) {
+			b_left[j+1] = b_left[j];
+			b_ncols[j+1] = b_ncols[j];
+			b_propw[j+1] = b_propw[j];
 		}
-		band_leftcol_old[j+1] = kl;
-		band_propw[j+1] = kp;
-		band_oldw[j+1] = kw;
+		b_left[j+1] = kl;
+		b_ncols[j+1] = kn;
+		b_propw[j+1] = kp;
 	}
 
-	if (nbands <= 1) {
-		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-			wp->w_leftcol = 0;
-			wp->w_ncols = newncol;
-			wp->w_lbound = 0;
-		}
-		return;
-	}
-
-	/*
-	 * Step 2: bootstrap propw if missing. Pre-existing layouts and
-	 * any band that lost its weight tracking get a weight derived
-	 * from current pixel width (one-time migration).
-	 */
 	total_propw = 0;
-	for (i = 0; i < nbands; i++) {
-		if (band_propw[i] <= 0)
-			band_propw[i] = band_oldw[i] > 0 ? band_oldw[i] : 1;
-		total_propw += band_propw[i];
+	for (i = 0; i < n_bands; i++) {
+		if (b_propw[i] <= 0)
+			b_propw[i] = b_ncols[i] > 0 ? b_ncols[i] : 1;
+		total_propw += b_propw[i];
 	}
 	if (total_propw <= 0)
 		total_propw = 1;
 
-	usable_new = newncol - (nbands - 1);
-	if (usable_new < nbands * MIN_WCOLS) {
-		for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-			wp->w_leftcol = 0;
-			wp->w_ncols = newncol;
-			wp->w_lbound = 0;
+	usable_new = newncol - (n_bands - 1);
+	if (usable_new < n_bands * MIN_WCOLS) {
+		for (i = 0; i < n_active; i++) {
+			active[i]->w_leftcol = 0;
+			active[i]->w_ncols = newncol;
+			active[i]->w_lbound = 0;
 		}
 		return;
 	}
 
-	/* Step 4: floor allocation from propw. */
 	used = 0;
-	for (i = 0; i < nbands; i++) {
-		long long scaled = (long long)band_propw[i] * usable_new;
+	for (i = 0; i < n_bands; i++) {
+		long long scaled = (long long)b_propw[i] * usable_new;
 		long long flr = scaled / total_propw;
 
-		band_neww[i] = (int)flr;
-		if (band_neww[i] < MIN_WCOLS)
-			band_neww[i] = MIN_WCOLS;
-		frac[i] = scaled - flr * total_propw;
+		b_neww[i] = (int)flr;
+		if (b_neww[i] < MIN_WCOLS)
+			b_neww[i] = MIN_WCOLS;
+		b_frac[i] = scaled - flr * total_propw;
 		order[i] = i;
-		used += band_neww[i];
+		used += b_neww[i];
 	}
 
-	/*
-	 * Step 5: order bands for leftover distribution. Primary key:
-	 * descending fractional remainder. Tie-break: ascending current
-	 * allocation (smaller band wins, so growth is even on round trips).
-	 */
-	for (i = 1; i < nbands; i++) {
+	for (i = 1; i < n_bands; i++) {
 		int oi = order[i];
 
 		for (j = i - 1; j >= 0; j--) {
 			int oj = order[j];
 
-			if (frac[oj] > frac[oi])
+			if (b_frac[oj] > b_frac[oi])
 				break;
-			if (frac[oj] == frac[oi] &&
-			    band_neww[oj] <= band_neww[oi])
+			if (b_frac[oj] == b_frac[oi] &&
+			    b_neww[oj] <= b_neww[oi])
 				break;
 			order[j+1] = order[j];
 		}
@@ -210,52 +174,149 @@ rescale_columns(int oldncol, int newncol)
 	rem = usable_new - used;
 	if (rem > 0) {
 		for (i = 0; i < rem; i++)
-			band_neww[order[i % nbands]]++;
+			b_neww[order[i % n_bands]]++;
 	} else if (rem < 0) {
 		int need = -rem;
 
-		for (i = nbands - 1; i >= 0 && need > 0; i--) {
+		for (i = n_bands - 1; i >= 0 && need > 0; i--) {
 			int oi = order[i];
-			int can = band_neww[oi] - MIN_WCOLS;
+			int can = b_neww[oi] - MIN_WCOLS;
 
 			if (can <= 0)
 				continue;
 			if (can > need)
 				can = need;
-			band_neww[oi] -= can;
+			b_neww[oi] -= can;
 			need -= can;
 		}
 		if (need > 0) {
-			for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-				wp->w_leftcol = 0;
-				wp->w_ncols = newncol;
-				wp->w_lbound = 0;
+			for (i = 0; i < n_active; i++) {
+				active[i]->w_leftcol = 0;
+				active[i]->w_ncols = newncol;
+				active[i]->w_lbound = 0;
 			}
 			return;
 		}
 	}
 
-	/* Step 6: assign new leftcols left-to-right with divider columns. */
 	{
 		int cursor = 0;
 
-		for (i = 0; i < nbands; i++) {
-			band_newleft[i] = cursor;
-			cursor += band_neww[i] + 1;
+		for (i = 0; i < n_bands; i++) {
+			b_newleft[i] = cursor;
+			cursor += b_neww[i] + 1;
 		}
 	}
 
-	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-		for (i = 0; i < nbands; i++) {
-			if (band_leftcol_old[i] == wp->w_leftcol) {
-				wp->w_leftcol = band_newleft[i];
-				wp->w_ncols = band_neww[i];
+	for (i = 0; i < n_active; i++) {
+		int idx = act_idx[i];
+		struct mgwin *wp = active[i];
+
+		for (j = 0; j < n_bands; j++) {
+			if (old_leftcol[idx] == b_left[j] &&
+			    old_ncols[idx] == b_ncols[j]) {
+				wp->w_leftcol = b_newleft[j];
+				wp->w_ncols = b_neww[j];
 				wp->w_lbound = 0;
-				/* keep propw in sync if it was bootstrapped */
-				wp->w_propw = band_propw[i];
+				wp->w_propw = b_propw[j];
 				break;
 			}
 		}
+	}
+}
+
+/*
+ * Proportionally rescale every window's column geometry to a new
+ * terminal width. The screen is decomposed into row strips by finding
+ * the unique row boundaries (each window's toprow and bottom edge);
+ * each strip is then rescaled independently using its own bands and
+ * their logical weights (w_propw).
+ *
+ * This handles mixed layouts where the top strip has different column
+ * divisions than the bottom strip (e.g. after C-x 2 then C-x 3, where
+ * the top is split into two halves and the bottom remains full-width).
+ *
+ * Windows that span multiple strips are looked up by their original
+ * (leftcol, ncols), so each strip's processing finds them consistently
+ * regardless of the order strips are visited.
+ */
+static void
+rescale_columns(int oldncol, int newncol)
+{
+	struct mgwin	*all_wps[64];
+	struct mgwin	*active[64];
+	int		 old_leftcol[64], old_ncols[64], old_propw[64];
+	int		 act_idx[64];
+	int		 boundaries[128];
+	int		 n_wps = 0;
+	int		 n_bnd = 0;
+	int		 i, j, si;
+	struct mgwin	*wp;
+
+	(void)oldncol;
+
+	for (wp = wheadp; wp != NULL && n_wps < 64; wp = wp->w_wndp) {
+		all_wps[n_wps] = wp;
+		old_leftcol[n_wps] = wp->w_leftcol;
+		old_ncols[n_wps] = wp->w_ncols;
+		old_propw[n_wps] = wp->w_propw;
+		n_wps++;
+	}
+
+	for (i = 0; i < n_wps; i++) {
+		int top = all_wps[i]->w_toprow;
+		int bot = all_wps[i]->w_toprow + all_wps[i]->w_ntrows + 1;
+		int dup;
+
+		dup = FALSE;
+		for (j = 0; j < n_bnd; j++)
+			if (boundaries[j] == top) {
+				dup = TRUE;
+				break;
+			}
+		if (!dup && n_bnd < 128)
+			boundaries[n_bnd++] = top;
+
+		dup = FALSE;
+		for (j = 0; j < n_bnd; j++)
+			if (boundaries[j] == bot) {
+				dup = TRUE;
+				break;
+			}
+		if (!dup && n_bnd < 128)
+			boundaries[n_bnd++] = bot;
+	}
+
+	for (i = 1; i < n_bnd; i++) {
+		int key = boundaries[i];
+
+		for (j = i - 1; j >= 0 && boundaries[j] > key; j--)
+			boundaries[j+1] = boundaries[j];
+		boundaries[j+1] = key;
+	}
+
+	for (si = 0; si < n_bnd - 1; si++) {
+		int strip_top = boundaries[si];
+		int strip_bot = boundaries[si+1] - 1;
+		int n_active = 0;
+
+		if (strip_top > strip_bot)
+			continue;
+
+		for (i = 0; i < n_wps && n_active < 64; i++) {
+			wp = all_wps[i];
+			if (wp->w_toprow <= strip_top &&
+			    wp->w_toprow + wp->w_ntrows + 1 > strip_top) {
+				active[n_active] = wp;
+				act_idx[n_active] = i;
+				n_active++;
+			}
+		}
+		if (n_active == 0)
+			continue;
+
+		rescale_strip(active, act_idx, n_active,
+		    old_leftcol, old_ncols, old_propw, newncol);
 	}
 }
 
@@ -329,108 +390,178 @@ collapse_to_curwp(void)
 }
 
 /*
- * For each unique column band (windows sharing a w_leftcol),
- * proportionally rescale every window in the band so the band fills
- * from its first window's toprow down to row newnrow - 2 (just above
- * the echo line). Walks each band top-to-bottom, sorts windows by
- * w_toprow, recomputes each window's w_ntrows in proportion to its
- * old text-row share, and reassigns w_toprow to keep the band
- * contiguous.
+ * Row-axis dual of rescale_columns: decompose the screen into row
+ * strips (each strip = a maximal contiguous range of rows where the
+ * set of active windows is constant), rescale each strip's height
+ * proportionally to fit the new screen, then update each window's
+ * (w_toprow, w_ntrows) to span exactly the strips it occupies.
  *
- * Returns FALSE if any band can't fit at least 1 text row + 1
- * modeline row per window. Caller is expected to collapse_to_curwp()
- * on failure.
+ * A window can span multiple strips (e.g. a full-height window
+ * alongside a horizontally-split column gets two strips), and the
+ * strip approach handles that correctly: its new toprow is the new
+ * top of the first strip it occupies, its new ntrows extends through
+ * the last strip's modeline row.
+ *
+ * Keying off strips rather than the old "windows sharing w_leftcol"
+ * is what lets mixed layouts work (e.g. top split horizontally into
+ * W1+W3, bottom a single full-width W2): the old approach extended
+ * W3 to full screen height because it was the only window in its
+ * leftcol band; the strip approach keeps W3 bounded to the top strip
+ * where it actually belongs.
+ *
+ * Returns FALSE if any strip can't fit at least 2 rows (1 text + 1
+ * modeline). Caller is expected to collapse_to_curwp() on failure.
  */
 static int
 adjust_row_per_band(int newnrow)
 {
-	struct mgwin	*wp, *o, *tmp, *band[64];
-	int		 seen[64];
-	int		 nseen = 0;
-	int		 i, j, k, nband, dup;
+	struct mgwin	*all_wps[64];
+	int		 old_toprow[64], old_ntrows[64];
+	int		 boundaries[128];
+	int		 new_bdy[128];
+	int		 strip_old_h[128], strip_new_h[128];
+	long long	 strip_frac[128];
+	int		 strip_order[128];
+	int		 n_wps = 0, n_bnd = 0, n_strips;
+	int		 i, j;
+	int		 total_old, total_new, used, rem;
+	struct mgwin	*wp;
 
-	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-		int my_leftcol = wp->w_leftcol;
-		int oldbottom, oldfirsttop, oldbandheight, newbandheight;
-		int old_total_text, cur_toprow;
-		int newntrows;
+	for (wp = wheadp; wp != NULL && n_wps < 64; wp = wp->w_wndp) {
+		all_wps[n_wps] = wp;
+		old_toprow[n_wps] = wp->w_toprow;
+		old_ntrows[n_wps] = wp->w_ntrows;
+		n_wps++;
+	}
+	if (n_wps == 0)
+		return (FALSE);
+
+	for (i = 0; i < n_wps; i++) {
+		int top = old_toprow[i];
+		int bot = old_toprow[i] + old_ntrows[i] + 1;
+		int dup;
 
 		dup = FALSE;
-		for (i = 0; i < nseen; i++) {
-			if (seen[i] == my_leftcol) {
+		for (j = 0; j < n_bnd; j++)
+			if (boundaries[j] == top) {
 				dup = TRUE;
 				break;
 			}
+		if (!dup && n_bnd < 128)
+			boundaries[n_bnd++] = top;
+
+		dup = FALSE;
+		for (j = 0; j < n_bnd; j++)
+			if (boundaries[j] == bot) {
+				dup = TRUE;
+				break;
+			}
+		if (!dup && n_bnd < 128)
+			boundaries[n_bnd++] = bot;
+	}
+
+	for (i = 1; i < n_bnd; i++) {
+		int key = boundaries[i];
+
+		for (j = i - 1; j >= 0 && boundaries[j] > key; j--)
+			boundaries[j+1] = boundaries[j];
+		boundaries[j+1] = key;
+	}
+
+	n_strips = n_bnd - 1;
+	if (n_strips < 1)
+		return (FALSE);
+
+	total_old = boundaries[n_strips] - boundaries[0];
+	total_new = newnrow - 1 - boundaries[0];
+	if (total_old <= 0 || total_new < 2 * n_strips)
+		return (FALSE);
+
+	used = 0;
+	for (i = 0; i < n_strips; i++) {
+		long long scaled;
+		int flr;
+
+		strip_old_h[i] = boundaries[i+1] - boundaries[i];
+		scaled = (long long)strip_old_h[i] * total_new;
+		flr = (int)(scaled / total_old);
+		if (flr < 2)
+			flr = 2;
+		strip_new_h[i] = flr;
+		strip_frac[i] = scaled - (long long)flr * total_old;
+		strip_order[i] = i;
+		used += flr;
+	}
+
+	/*
+	 * Order strips for leftover distribution: primary key descending
+	 * frac, tie-break ascending new height (smaller strip wins extras
+	 * so growth stays symmetric over round trips).
+	 */
+	for (i = 1; i < n_strips; i++) {
+		int oi = strip_order[i];
+
+		for (j = i - 1; j >= 0; j--) {
+			int oj = strip_order[j];
+
+			if (strip_frac[oj] > strip_frac[oi])
+				break;
+			if (strip_frac[oj] == strip_frac[oi] &&
+			    strip_new_h[oj] <= strip_new_h[oi])
+				break;
+			strip_order[j+1] = strip_order[j];
 		}
-		if (dup)
-			continue;
-		if (nseen < (int)(sizeof(seen) / sizeof(seen[0])))
-			seen[nseen++] = my_leftcol;
+		strip_order[j+1] = oi;
+	}
 
-		/* Collect this band's windows. */
-		nband = 0;
-		for (o = wheadp; o != NULL; o = o->w_wndp) {
-			if (o->w_leftcol == my_leftcol &&
-			    nband < (int)(sizeof(band) / sizeof(band[0])))
-				band[nband++] = o;
+	rem = total_new - used;
+	if (rem > 0) {
+		for (i = 0; i < rem; i++)
+			strip_new_h[strip_order[i % n_strips]]++;
+	} else if (rem < 0) {
+		int need = -rem;
+
+		for (i = n_strips - 1; i >= 0 && need > 0; i--) {
+			int oi = strip_order[i];
+			int can = strip_new_h[oi] - 2;
+
+			if (can <= 0)
+				continue;
+			if (can > need)
+				can = need;
+			strip_new_h[oi] -= can;
+			need -= can;
 		}
+		if (need > 0)
+			return (FALSE);
+	}
 
-		/* Insertion sort by w_toprow. */
-		for (j = 1; j < nband; j++) {
-			tmp = band[j];
-			for (k = j - 1;
-			    k >= 0 && band[k]->w_toprow > tmp->w_toprow; k--)
-				band[k+1] = band[k];
-			band[k+1] = tmp;
+	new_bdy[0] = boundaries[0];
+	for (i = 0; i < n_strips; i++)
+		new_bdy[i+1] = new_bdy[i] + strip_new_h[i];
+
+	for (i = 0; i < n_wps; i++) {
+		int first = -1, last = -1;
+		int wtop = old_toprow[i];
+		int wbot = old_toprow[i] + old_ntrows[i] + 1;
+
+		for (j = 0; j < n_strips; j++) {
+			if (boundaries[j] >= wtop &&
+			    boundaries[j+1] <= wbot) {
+				if (first == -1)
+					first = j;
+				last = j;
+			}
 		}
-
-		oldfirsttop = band[0]->w_toprow;
-		oldbottom = band[nband-1]->w_toprow +
-		    band[nband-1]->w_ntrows;
-		/* +1 to include the bottom modeline row */
-		oldbandheight = oldbottom - oldfirsttop + 1;
-
-		/*
-		 * The band keeps its top edge where it was (other bands
-		 * may also start there; rearranging across bands is more
-		 * than this function tackles). It must now end at row
-		 * newnrow - 2 (modeline of last window), so the new
-		 * band height is newnrow - 1 - oldfirsttop.
-		 */
-		newbandheight = newnrow - 1 - oldfirsttop;
-		if (newbandheight < 2 * nband)
+		if (first == -1)
 			return (FALSE);
 
-		/*
-		 * Each window contributes 1 modeline + at least 1 text row.
-		 * Distribute the remaining text rows proportionally to the
-		 * old text-row counts.
-		 */
-		old_total_text = oldbandheight - nband; /* subtract modelines */
-		if (old_total_text < nband)
-			old_total_text = nband;
-
-		cur_toprow = oldfirsttop;
-		for (j = 0; j < nband; j++) {
-			if (j == nband - 1) {
-				/* last window takes whatever's left */
-				newntrows = newnrow - 1 - cur_toprow - 1;
-			} else {
-				newntrows = (int)(((long long)
-				    band[j]->w_ntrows *
-				    (newbandheight - nband) +
-				    old_total_text / 2) / old_total_text);
-				if (newntrows < 1)
-					newntrows = 1;
-			}
-			if (newntrows < 1)
-				return (FALSE);
-			band[j]->w_toprow = cur_toprow;
-			band[j]->w_ntrows = newntrows;
-			band[j]->w_rflag |= WFMODE | WFFULL;
-			cur_toprow += newntrows + 1; /* +1 for modeline */
-		}
+		all_wps[i]->w_toprow = new_bdy[first];
+		all_wps[i]->w_ntrows =
+		    new_bdy[last+1] - new_bdy[first] - 1;
+		all_wps[i]->w_rflag |= WFMODE | WFFULL;
 	}
+
 	return (TRUE);
 }
 
