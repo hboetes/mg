@@ -703,6 +703,17 @@ update(int modelinecolor)
 				++i;
 			}
 		}
+	}
+	/*
+	 * Modeline pass.  Runs after every window's text paint so a
+	 * later window's WFFULL loop can't clobber the split-color state
+	 * (v_lend / v_lcolor / v_color) that modeline() installs on a
+	 * row that is simultaneously a modeline row for one window and
+	 * a text row for another.
+	 */
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+		if (wp->w_rflag == 0)
+			continue;
 		if ((wp->w_rflag & WFMODE) != 0)
 			modeline(wp, modelinecolor);
 		paint_divider(wp);
@@ -874,6 +885,8 @@ ucopy(struct video *vvp, struct video *pvp)
 	pvp->v_hash = vvp->v_hash;
 	pvp->v_cost = vvp->v_cost;
 	pvp->v_color = vvp->v_color;
+	pvp->v_lcolor = vvp->v_lcolor;
+	pvp->v_lend = vvp->v_lend;
 	bcopy(vvp->v_text, pvp->v_text, ncol);
 	if (vvp->v_attr != NULL && pvp->v_attr != NULL)
 		bcopy(vvp->v_attr, pvp->v_attr, ncol);
@@ -1072,12 +1085,22 @@ modeline(struct mgwin *wp, int modelinecolor)
 			vscreen[n]->v_lend = mode_l;
 			vscreen[n]->v_color = modelinecolor;
 		} else {
-			/* Interleaved / >2 regions: degrade to plain text. */
+			/*
+			 * Interleaved / >2 regions (e.g. TEXT-MODE-TEXT when
+			 * a middle-column window's modeline sits on a row
+			 * whose flanking columns belong to text-row windows).
+			 * The 2-region (v_color / v_lcolor / v_lend) model
+			 * can't express that, so fall back to per-column
+			 * v_attr.  v_color=CTEXT + v_lend=0 makes effcolor()
+			 * read v_attr; vtattr below stamps modelinecolor onto
+			 * the cells this window writes.
+			 */
 			vscreen[n]->v_color = CTEXT;
 			vscreen[n]->v_lend = 0;
 		}
 	}
 	vscreen[n]->v_flag |= (VFCHG | VFHBAD);	/* Recompute, display.	 */
+	vtattr = modelinecolor;			/* Stamp v_attr for cells we write. */
 	vtmove(n, wp->w_leftcol);		/* Seek to right line.	 */
 	bp = wp->w_bufp;
 	vtputc('-', wp);
@@ -1135,6 +1158,7 @@ modeline(struct mgwin *wp, int modelinecolor)
 		vtputc('-', wp);
 		++n;
 	}
+	vtattr = CTEXT;				/* Restore default. */
 }
 
 /*
