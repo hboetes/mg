@@ -884,39 +884,268 @@ shrinkwind(int f, int n)
 }
 
 /*
- * Delete current window. Call shrink-window to do the screen updating, then
- * throw away the window.
+ * Try to absorb wp into adjacent windows along one axis.
+ *
+ *   axis=COL: absorbers are left or right of wp. They must share a
+ *             (leftcol, ncols) and their row spans must tile wp's
+ *             row span exactly. Each absorber gains wp's columns +
+ *             the divider column. Used for "vertical split" deletes.
+ *
+ *   axis=ROW: absorbers are above or below wp. They must share a
+ *             (toprow, ntrows) and their column spans must tile wp's
+ *             column span exactly (with divider columns between).
+ *             Each absorber gains wp's rows + the modeline row.
+ *
+ * Returns the survivor on success, NULL if no valid absorber set
+ * exists on this axis. Validation runs before any mutation, so a
+ * NULL return leaves layout untouched.
+ */
+#define ABS_AXIS_COL	0
+#define ABS_AXIS_ROW	1
+static struct mgwin *
+absorb_into(struct mgwin *wp, int axis)
+{
+	struct mgwin	*iter;
+	struct mgwin	*set[64];
+	struct line	*lp;
+	int		 nset = 0;
+	int		 max = (int)(sizeof(set) / sizeof(set[0]));
+	int		 i, j;
+	int		 forward;	/* forward = "absorbers come before wp" */
+	int		 wpleft = wp->w_leftcol;
+	int		 wpright = wp->w_leftcol + wp->w_ncols;
+	int		 wptop = wp->w_toprow;
+	int		 wpbot = wp->w_toprow + wp->w_ntrows;
+
+	/* Gather candidates on the "near" side of wp. */
+	if (axis == ABS_AXIS_COL) {
+		for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+			if (iter == wp)
+				continue;
+			if (iter->w_leftcol + iter->w_ncols + 1 == wpleft &&
+			    nset < max)
+				set[nset++] = iter;
+		}
+		forward = (nset > 0);
+		if (nset == 0) {
+			for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+				if (iter == wp)
+					continue;
+				if (iter->w_leftcol == wpright + 1 &&
+				    nset < max)
+					set[nset++] = iter;
+			}
+		}
+	} else {
+		for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+			if (iter == wp)
+				continue;
+			if (iter->w_toprow + iter->w_ntrows + 1 == wptop &&
+			    nset < max)
+				set[nset++] = iter;
+		}
+		forward = (nset > 0);
+		if (nset == 0) {
+			for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+				if (iter == wp)
+					continue;
+				if (wpbot + 1 == iter->w_toprow && nset < max)
+					set[nset++] = iter;
+			}
+		}
+	}
+	if (nset == 0)
+		return (NULL);
+
+	/* All absorbers must share the perpendicular geometry. */
+	for (j = 1; j < nset; j++) {
+		if (axis == ABS_AXIS_COL) {
+			if (set[j]->w_leftcol != set[0]->w_leftcol ||
+			    set[j]->w_ncols != set[0]->w_ncols)
+				return (NULL);
+		} else {
+			if (set[j]->w_toprow != set[0]->w_toprow ||
+			    set[j]->w_ntrows != set[0]->w_ntrows)
+				return (NULL);
+		}
+	}
+
+	/* Sort by the parallel axis. */
+	for (i = 1; i < nset; i++) {
+		struct mgwin *tmp = set[i];
+		int key = (axis == ABS_AXIS_COL) ?
+		    tmp->w_toprow : tmp->w_leftcol;
+
+		for (j = i - 1; j >= 0; j--) {
+			int prev = (axis == ABS_AXIS_COL) ?
+			    set[j]->w_toprow : set[j]->w_leftcol;
+			if (prev <= key)
+				break;
+			set[j+1] = set[j];
+		}
+		set[j+1] = tmp;
+	}
+
+	/* Validate tiling along the parallel axis. */
+	if (axis == ABS_AXIS_COL) {
+		if (set[0]->w_toprow != wptop)
+			return (NULL);
+		for (j = 0; j < nset; j++) {
+			int abot = set[j]->w_toprow + set[j]->w_ntrows;
+
+			if (j == nset - 1) {
+				if (abot != wpbot)
+					return (NULL);
+			} else if (abot + 1 != set[j+1]->w_toprow) {
+				return (NULL);
+			}
+		}
+	} else {
+		if (set[0]->w_leftcol != wpleft)
+			return (NULL);
+		for (j = 0; j < nset; j++) {
+			int aright = set[j]->w_leftcol + set[j]->w_ncols;
+
+			if (j == nset - 1) {
+				if (aright != wpright)
+					return (NULL);
+			} else if (aright + 1 != set[j+1]->w_leftcol) {
+				return (NULL);
+			}
+		}
+	}
+
+	/* Apply absorption. */
+	if (axis == ABS_AXIS_COL) {
+		for (j = 0; j < nset; j++) {
+			set[j]->w_ncols += wp->w_ncols + 1;
+			if (!forward)
+				set[j]->w_leftcol = wpleft;
+			set[j]->w_propw += wp->w_propw;
+			set[j]->w_rflag |= WFMODE | WFFULL;
+		}
+	} else {
+		int extra = wp->w_ntrows + 1;
+
+		for (j = 0; j < nset; j++) {
+			if (!forward) {
+				set[j]->w_toprow = wptop;
+				lp = set[j]->w_linep;
+				for (i = 0; i < extra &&
+				    lback(lp) != set[j]->w_bufp->b_headp; i++)
+					lp = lback(lp);
+				set[j]->w_linep = lp;
+			}
+			set[j]->w_ntrows += extra;
+			set[j]->w_rflag |= WFMODE | WFFULL;
+		}
+	}
+	return (set[0]);
+}
+
+/*
+ * Delete current window. Geometry-aware:
+ *
+ *   1. Horizontal-split delete: if wp has a vertical neighbor in the
+ *      same column band (same (w_leftcol, w_ncols), touching top-or-
+ *      bottom edge), that neighbor absorbs wp's rows.
+ *
+ *   2. Column absorb: gather all windows whose right or left edge
+ *      touches wp's opposite edge. They must share (w_leftcol, w_ncols)
+ *      and tile wp's row span exactly. Each gains wp's columns + divider.
+ *
+ *   3. Row absorb: gather all windows whose bottom or top edge touches
+ *      wp's opposite edge. They must share (w_toprow, w_ntrows) and
+ *      tile wp's column span exactly. Each gains wp's rows + modeline.
+ *
+ *   4. If none work, refuse the delete and leave state untouched.
+ *
+ * A "column band" is keyed by (w_leftcol, w_ncols); a "row band" by
+ * (w_toprow, w_ntrows). Two windows sharing only one of those values
+ * belong to different bands.
  */
 int
 delwind(int f, int n)
 {
-	struct mgwin	*wp, *nwp;
+	struct mgwin	*wp = curwp;
+	struct mgwin	*band_mate = NULL;
+	struct mgwin	*survivor = NULL;
+	struct mgwin	*iter, *prev;
+	struct line	*lp;
+	int		 i;
+	int		 total = 0;
 
-	wp = curwp;		/* Cheap...		 */
-
-	/* shrinkwind returning false means only one window... */
-	if (shrinkwind(FFRAND, wp->w_ntrows + 1) == FALSE)
+	for (iter = wheadp; iter != NULL; iter = iter->w_wndp)
+		total++;
+	if (total <= 1) {
+		dobeep();
+		ewprintf("Only one window");
 		return (FALSE);
+	}
+
+	/* Case 1: horizontal-split delete (same band, vertically adjacent). */
+	for (iter = wheadp; iter != NULL; iter = iter->w_wndp) {
+		if (iter == wp)
+			continue;
+		if (iter->w_leftcol != wp->w_leftcol)
+			continue;
+		if (iter->w_ncols != wp->w_ncols)
+			continue;
+		if (iter->w_toprow + iter->w_ntrows + 1 == wp->w_toprow ||
+		    wp->w_toprow + wp->w_ntrows + 1 == iter->w_toprow) {
+			band_mate = iter;
+			break;
+		}
+	}
+
+	if (band_mate != NULL) {
+		int extra = wp->w_ntrows + 1;
+
+		if (band_mate->w_toprow > wp->w_toprow) {
+			band_mate->w_toprow = wp->w_toprow;
+			lp = band_mate->w_linep;
+			for (i = 0; i < extra &&
+			    lback(lp) != band_mate->w_bufp->b_headp; i++)
+				lp = lback(lp);
+			band_mate->w_linep = lp;
+		}
+		band_mate->w_ntrows += extra;
+		band_mate->w_rflag |= WFMODE | WFFULL;
+		survivor = band_mate;
+	}
+	if (survivor == NULL)
+		survivor = absorb_into(wp, ABS_AXIS_COL);
+	if (survivor == NULL)
+		survivor = absorb_into(wp, ABS_AXIS_ROW);
+	if (survivor == NULL) {
+		dobeep();
+		ewprintf("No adjacent space to absorb");
+		return (FALSE);
+	}
+
 	if (--wp->w_bufp->b_nwnd == 0) {
 		wp->w_bufp->b_dotp = wp->w_dotp;
 		wp->w_bufp->b_doto = wp->w_doto;
 		wp->w_bufp->b_markp = wp->w_markp;
 		wp->w_bufp->b_marko = wp->w_marko;
+		wp->w_bufp->b_markp = wp->w_markp;
 		wp->w_bufp->b_dotline = wp->w_dotline;
 		wp->w_bufp->b_markline = wp->w_markline;
 	}
 
-	/* since shrinkwind did't crap out, we know we have a second window */
-	if (wp == wheadp)
-		wheadp = curwp = wp->w_wndp;
-	else if ((curwp = wp->w_wndp) == NULL)
-		curwp = wheadp;
-	curbp = curwp->w_bufp;
-	for (nwp = wheadp; nwp != NULL; nwp = nwp->w_wndp)
-		if (nwp->w_wndp == wp) {
-			nwp->w_wndp = wp->w_wndp;
-			break;
+	if (wp == wheadp) {
+		wheadp = wp->w_wndp;
+	} else {
+		for (prev = wheadp; prev != NULL; prev = prev->w_wndp) {
+			if (prev->w_wndp == wp) {
+				prev->w_wndp = wp->w_wndp;
+				break;
+			}
 		}
+	}
+	curwp = survivor;
+	curbp = curwp->w_bufp;
 	free(wp);
+	sgarbf = TRUE;
 	return (TRUE);
 }
