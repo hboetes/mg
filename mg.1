@@ -244,6 +244,8 @@ delete-window
 delete-other-windows
 .It C-x 2
 split-window-vertically
+.It C-x 3
+split-window-horizontally
 .It C-x 4 C-f
 find-file-other-window
 .It C-x 4 C-g
@@ -284,6 +286,10 @@ previous-window
 save-some-buffers
 .It C-x u
 undo
+.It C-x {
+shrink-window-horizontally
+.It C-x }
+enlarge-window-horizontally
 .It C-y
 yank
 .It C-z
@@ -578,6 +584,13 @@ Move cursor to the end of the line.
 .It Ic enlarge-window
 Enlarge the current window by shrinking either the window above
 or below it.
+.It Ic enlarge-window-horizontally
+Enlarge the current window's column band by shrinking the adjacent
+band (preferring the right neighbor, falling back to the left).
+The argument
+.Va n
+controls how many columns to grow.
+A negative argument shrinks instead.
 .It Ic eval-current-buffer
 Evaluate the current buffer as a series of
 .Nm
@@ -948,9 +961,21 @@ output.
 Shrink current window by one line.
 The window immediately below is expanded to pick up the slack.
 If only one window is present, this command has no effect.
+.It Ic shrink-window-horizontally
+Shrink the current window's column band, giving the columns to the
+adjacent band (preferring the right neighbor, falling back to the
+left).
+The argument
+.Va n
+controls how many columns to shrink.
+A negative argument enlarges instead.
 .It Ic space-to-tabstop
 Insert enough spaces to reach the next tab-stop position.
 By default, tab-stops occur every 8 characters.
+.It Ic split-window-horizontally
+Split the current window into a side-by-side pair separated by a
+one-column divider.
+A window narrower than 17 columns cannot be split.
 .It Ic split-window-vertically
 Split the current window.
 A window smaller than 3 lines cannot be split.
