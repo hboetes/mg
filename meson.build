@@ -28,7 +28,7 @@ executable(
   'region.c', 'search.c', 'spawn.c', 'tags.c', 'tty.c', 'ttykbd.c',
   'undo.c', 'version.c', 'window.c', 'word.c', 'yank.c', 'main.c',
   'basic.c', 'buffer.c', 'cmode.c', 'display.c', 'extend.c', 'makemode.c',
-  'funmap.c', 'interpreter.c', 'keymap.c', 'match.c', 'modes.c',
+  'funmap.c', 'interpreter.c', 'keymap.c', 'llm.c', 'match.c', 'modes.c',
   'paragraph.c', 'util.c',
   install: true,
   dependencies: [bsdlib_dep, ncurses_dep],

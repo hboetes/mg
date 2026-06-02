@@ -744,6 +744,57 @@ character.
 The second column indicates which buffers are modified.
 The third column indicates which buffers are read-only.
 The remaining columns are self-explanatory.
+.It Ic llm
+Send a coding-assistant request to a local OpenAI-compatible chat
+completions endpoint via
+.Xr curl 1
+and replace the current region (or the whole buffer if no mark is set)
+with the response.
+Prompts for an instruction (e.g.\&
+.Dq add a docstring ,
+.Dq rewrite as a switch ,
+.Dq write a hybrid quicksort in Python ) ,
+then submits the instruction together with the selected text.
+The model is instructed to return only a single fenced markdown code
+block; the surrounding fences and any stray prose are stripped before
+insertion.
+The whole transformation is recorded as a single undo entry, so
+.Ic undo
+reverses it in one step.
+Requires
+.Ic llm-set-url
+and
+.Ic llm-set-model
+to have been configured (see
+.Sx CONFIGURATION FILES ) ,
+and the
+.Xr curl 1
+binary to be available on
+.Ev PATH .
+.It Ic llm-set-key
+Set the bearer token sent in the
+.Dq Authorization
+header of the
+.Ic llm
+request.
+If the value is empty, no
+.Dq Authorization
+header is sent (suitable for a local
+.Xr llama.cpp 1
+server).
+Intended for use in the startup file.
+.It Ic llm-set-model
+Set the model name sent in the request body of the
+.Ic llm
+command.
+Intended for use in the startup file.
+.It Ic llm-set-url
+Set the endpoint URL for the
+.Ic llm
+command.
+Must be a full OpenAI-compatible chat completions URL, e.g.\&
+.Dq http://127.0.0.1:8080/v1/chat/completions .
+Intended for use in the startup file.
 .It Ic load
 Prompt the user for a filename, and then execute commands
 from that file.
@@ -1222,6 +1273,9 @@ global-set-key "\ee[Z" backward-char
 set-default-mode fill
 set-fill-column 72
 auto-execute *.c c-mode
+llm-set-url   "http://127.0.0.1:8080/v1/chat/completions"
+llm-set-model "qwen2.5-coder"
+llm-set-key   ""
 .Ed
 .Pp
 Comments can be added to the startup files by placing
@@ -1242,6 +1296,7 @@ concise tutorial
 .El
 .Sh SEE ALSO
 .Xr ctags 1 ,
+.Xr curl 1 ,
 .Xr vi 1
 .Sh CAVEATS
 Since it is written completely in C, there is currently no

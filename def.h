@@ -771,6 +771,12 @@ void		 dobeep(void);
 int		 foundparen(char *, int, int);
 void		 cleanup(void);
 
+/* llm.c */
+int		 llm(int, int);
+int		 llm_set_url(int, int);
+int		 llm_set_model(int, int);
+int		 llm_set_key(int, int);
+
 /*
  * Externals.
  */
