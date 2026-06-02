@@ -868,6 +868,29 @@ Refresh the display.
 Recomputes all window sizes in case something has changed.
 .It Ic revert-buffer
 Revert the current buffer to the latest file on disk.
+.It Ic rgrep
+Recursive grep, similar to GNU Emacs M-x rgrep.
+Prompts for a search pattern, a list of file glob patterns
+(space-separated, e.g.\&
+.Dq *.c *.h ) ,
+and a base directory.
+Constructs a
+.Xr find 1
+and
+.Xr grep 1
+pipeline to search recursively, pruning the
+.Pa .git ,
+.Pa .svn ,
+.Pa CVS ,
+and
+.Pa .hg
+directories.
+Results are placed in the *grep* buffer and can be navigated using
+.Ic compile-goto-error
+and
+.Ic next-error .
+The most recently used pattern, file list, and base directory are
+pre-filled on subsequent invocations.
 .It Ic save-buffer
 Save the contents of the current buffer if it has been changed,
 optionally creating a backup copy.
@@ -1028,6 +1051,12 @@ Repeat the next command 4 times.
 Usually bound to C-u.
 This command may be stacked; e.g.\&
 C-u C-u C-f moves the cursor forward 16 characters.
+.It Ic untabify-region
+Replace each tab in the region with the number of spaces needed to
+reach the next tab stop, using the buffer's tab width.
+Column tracking is line-relative and accounts for any text preceding
+the region's start on its line, matching GNU Emacs untabify.
+The mark is cleared afterwards.
 .It Ic upcase-region
 Upper case region.
 Change all of the lower case characters in the region to

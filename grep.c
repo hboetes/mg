@@ -3,6 +3,7 @@
 /* This file is in the public domain */
 
 #include <sys/queue.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -23,11 +24,16 @@ int	 globalwd = FALSE;
 static int	 compile_goto_error(int, int);
 int		 next_error(int, int);
 static int	 grep(int, int);
+static int	 rgrep(int, int);
 static int	 gid(int, int);
 static struct buffer	*compile_mode(const char *, const char *);
 void grep_init(void);
 
 static char compile_last_command[NFILEN] = "make ";
+
+static char rgrep_last_pattern[NFILEN];
+static char rgrep_last_files[NFILEN] = "*";
+static char rgrep_last_dir[NFILEN];
 
 /*
  * Hints for next-error
@@ -56,6 +62,7 @@ grep_init(void)
 	funmap_add(compile_goto_error, "compile-goto-error", 0);
 	funmap_add(next_error, "next-error", 0);
 	funmap_add(grep, "grep", 1);
+	funmap_add(rgrep, "rgrep", 1);
 	funmap_add(compile, "compile", 0);
 	funmap_add(gid, "gid", 1);
 	maps_add((KEYMAP *)&compilemap, "compile");
@@ -78,6 +85,164 @@ grep(int f, int n)
 		return (FALSE);
 
 	if ((bp = compile_mode("*grep*", cprompt)) == NULL)
+		return (FALSE);
+	if ((wp = popbuf(bp, WNONE)) == NULL)
+		return (FALSE);
+	curbp = bp;
+	compile_win = curwp = wp;
+	return (TRUE);
+}
+
+/*
+ * Single-quote-escape s into out for safe shell interpolation.
+ * Embedded ' becomes '\''.  Returns FALSE on truncation.
+ */
+static int
+shell_squote(const char *s, char *out, size_t outsz)
+{
+	size_t		 o = 0;
+	const char	*p;
+
+	if (outsz < 3)
+		return (FALSE);
+	out[o++] = '\'';
+	for (p = s; *p != '\0'; p++) {
+		if (*p == '\'') {
+			if (o + 4 >= outsz)
+				return (FALSE);
+			out[o++] = '\'';
+			out[o++] = '\\';
+			out[o++] = '\'';
+			out[o++] = '\'';
+		} else {
+			if (o + 1 >= outsz)
+				return (FALSE);
+			out[o++] = *p;
+		}
+	}
+	if (o + 2 > outsz)
+		return (FALSE);
+	out[o++] = '\'';
+	out[o] = '\0';
+	return (TRUE);
+}
+
+/*
+ * Recursive grep, modeled on GNU Emacs M-x rgrep.
+ *
+ * Prompts for a search pattern, a list of file glob patterns
+ * (space-separated, e.g. "*.c *.h"), and a base directory.  Builds
+ * a portable find(1) + grep(1) pipeline and feeds it to compile_mode(),
+ * reusing the *grep* buffer and the existing compile-goto-error /
+ * next-error wiring.
+ *
+ * Directories matching .git, .svn, CVS, .hg are pruned.
+ */
+static int
+rgrep(int f, int n)
+{
+	char		 pat[NFILEN], files[NFILEN], dir[NFILEN];
+	char		 cmd[NFILEN], globs[NFILEN];
+	char		 qpat[NFILEN], qdir[NFILEN];
+	char		*bufp, *tok, *p;
+	struct buffer	*bp;
+	struct mgwin	*wp;
+	struct stat	 st;
+	size_t		 off;
+	int		 len, ntok;
+
+	if (rgrep_last_dir[0] == '\0')
+		(void)getbufcwd(rgrep_last_dir, sizeof(rgrep_last_dir));
+
+	(void)strlcpy(pat, rgrep_last_pattern, sizeof(pat));
+	if ((bufp = eread("Search for (rgrep): ", pat, sizeof(pat),
+	    (pat[0] ? EFDEF : 0) | EFNEW | EFCR)) == NULL)
+		return (ABORT);
+	else if (bufp[0] == '\0')
+		return (FALSE);
+
+	(void)strlcpy(files, rgrep_last_files, sizeof(files));
+	if ((bufp = eread("Search files (e.g. *.c *.h): ", files,
+	    sizeof(files), EFDEF | EFNEW | EFCR)) == NULL)
+		return (ABORT);
+	else if (bufp[0] == '\0')
+		return (FALSE);
+
+	(void)strlcpy(dir, rgrep_last_dir, sizeof(dir));
+	if ((bufp = eread("Base directory: ", dir, sizeof(dir),
+	    EFDEF | EFNEW | EFCR | EFFILE)) == NULL)
+		return (ABORT);
+	else if (bufp[0] == '\0')
+		return (FALSE);
+
+	if (stat(dir, &st) == -1 || !S_ISDIR(st.st_mode)) {
+		dobeep();
+		ewprintf("Not a directory: %s", dir);
+		return (FALSE);
+	}
+
+	(void)strlcpy(rgrep_last_pattern, pat, sizeof(rgrep_last_pattern));
+	(void)strlcpy(rgrep_last_files, files, sizeof(rgrep_last_files));
+	(void)strlcpy(rgrep_last_dir, dir, sizeof(rgrep_last_dir));
+
+	/* Build the -name clause from space-separated globs. */
+	globs[0] = '\0';
+	off = 0;
+	ntok = 0;
+	p = files;
+	while ((tok = strsep(&p, " \t")) != NULL) {
+		char		 qtok[NFILEN];
+		const char	*sep;
+
+		if (*tok == '\0')
+			continue;
+		if (shell_squote(tok, qtok, sizeof(qtok)) != TRUE) {
+			dobeep();
+			ewprintf("File pattern too long");
+			return (FALSE);
+		}
+		sep = (ntok == 0) ? "" : " -o ";
+		if (off >= sizeof(globs))
+			return (FALSE);
+		len = snprintf(globs + off, sizeof(globs) - off,
+		    "%s-name %s", sep, qtok);
+		if (len < 0 || (size_t)len >= sizeof(globs) - off) {
+			dobeep();
+			ewprintf("Too many file patterns");
+			return (FALSE);
+		}
+		off += (size_t)len;
+		ntok++;
+	}
+	if (ntok == 0) {
+		if (strlcpy(globs, "-name '*'", sizeof(globs)) >=
+		    sizeof(globs))
+			return (FALSE);
+	}
+
+	if (shell_squote(pat, qpat, sizeof(qpat)) != TRUE) {
+		dobeep();
+		ewprintf("Pattern too long");
+		return (FALSE);
+	}
+	if (shell_squote(dir, qdir, sizeof(qdir)) != TRUE) {
+		dobeep();
+		ewprintf("Directory path too long");
+		return (FALSE);
+	}
+
+	len = snprintf(cmd, sizeof(cmd),
+	    "find %s \\( -type d \\( -name .git -o -name .svn "
+	    "-o -name CVS -o -name .hg \\) -prune \\) -o "
+	    "-type f \\( %s \\) -exec grep -nH -e %s {} +",
+	    qdir, globs, qpat);
+	if (len < 0 || (size_t)len >= sizeof(cmd)) {
+		dobeep();
+		ewprintf("rgrep command too long");
+		return (FALSE);
+	}
+
+	if ((bp = compile_mode("*grep*", cmd)) == NULL)
 		return (FALSE);
 	if ((wp = popbuf(bp, WNONE)) == NULL)
 		return (FALSE);
