@@ -410,6 +410,8 @@ int		 writeout(FILE **, struct buffer *, char *);
 void		 upmodes(struct buffer *);
 size_t		 xbasename(char *, const char *, size_t);
 int		 do_filevisitalt(char *);
+int		 set_require_final_newline(int, int);
+extern int		 require_final_newline;
 
 /* line.c X */
 struct line	*lalloc(int);
