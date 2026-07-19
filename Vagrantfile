@@ -1,6 +1,7 @@
 BOXES = {
   "freebsd14" => { box: "generic/freebsd14", shell: "sh",  synced: false },
   "netbsd9"   => { box: "generic/netbsd9",   shell: "sh",  synced: false },
+  "openbsd7"  => { box: "generic/openbsd7",  shell: "sh",  synced: false },
 }
 
 PROVISION = {
@@ -16,6 +17,18 @@ PROVISION = {
     sudo update-ca-certificates
     git clone https://github.com/hboetes/mg /home/vagrant/mg
     cd /home/vagrant/mg && gmake
+  SH
+  "openbsd7" => <<~SH,
+    command -v cvs >/dev/null 2>&1 || doas pkg_add cvs
+    mkdir -p ~/.ssh
+    ssh-keyscan -H anoncvs.eu.openbsd.org >> ~/.ssh/known_hosts 2>/dev/null
+    export CVS_RSH="ssh"
+    mkdir -p /home/vagrant/obsd-src
+    cd /home/vagrant/obsd-src
+    cvs -qd anoncvs@anoncvs.eu.openbsd.org:/cvs get -P src/usr.bin/mg
+    cd src/usr.bin/mg
+    # patch -p0 < /home/vagrant/mg-require-final-newline-upstream.patch
+    make
   SH
 }
 
