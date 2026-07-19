@@ -34,7 +34,6 @@ set_require_final_newline(int f, int n)
 	const char *es;
 	int newline_mode;
 
-
 	if ((f & FFARG) != 0) {
 		if (n < -1 || n > 1) {
 			dobeep();
@@ -49,6 +48,8 @@ set_require_final_newline(int f, int n)
 	    buf, sizeof(buf), EFNEW | EFCR);
 	if (response == NULL)
 		return (ABORT);
+	else if (response[0] == '\0')
+		return (FALSE);
 	newline_mode = strtonum(response, -1, 1, &es);
 	if (es != NULL) {
 		dobeep();
