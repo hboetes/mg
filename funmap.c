@@ -156,7 +156,6 @@ static struct funmap functnames[] = {
 	{negative_argument, "negative-argument", 1},
 	{enewline, "newline", 1},
 	{lfindent, "newline-and-indent", 1},
-	{set_require_final_newline, "require-final-newline", 1},
 	{forwline, "next-line", 1},
 	{notabmode, "no-tab-mode", 0},
 	{notmodified, "not-modified", 0},
@@ -185,6 +184,7 @@ static struct funmap functnames[] = {
 	{re_repl, "replace-regexp", 2},
 	{replstr, "replace-string", 2},
 #endif /* REGEX */
+	{set_require_final_newline, "require-final-newline", 1},
 	{revertbuffer, "revert-buffer", 0},
 	{filesave, "save-buffer", 1},
 	{quit, "save-buffers-kill-emacs", 0},
