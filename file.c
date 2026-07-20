@@ -34,7 +34,6 @@ set_require_final_newline(int f, int n)
 	const char *es;
 	int newline_mode;
 
-
 	if ((f & FFARG) != 0) {
 		if (n < -1 || n > 1) {
 			dobeep();
