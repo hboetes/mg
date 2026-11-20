@@ -1,4 +1,4 @@
-/*	$OpenBSD: dired.c,v 1.105 2025/08/20 03:10:45 tb Exp $	*/
+/*	$OpenBSD: dired.c,v 1.108 2026/11/12 15:03:58 op Exp $	*/
 
 /* This file is in the public domain. */
 
@@ -58,7 +58,7 @@ static int	 gotofile(char*);
 static struct buffer	*refreshbuffer(struct buffer *);
 static int	 createlist(struct buffer *);
 static void	 redelete(struct buffer *);
-static char 	 *findfname(struct line *, char *);
+static char 	 *findfname(struct line *);
 
 extern struct KEYMAPE (2) helpmap;
 extern struct KEYMAPE (6) cXmap;
@@ -521,9 +521,8 @@ d_copy(int f, int n)
 		ewprintf("Cannot copy to same file: %s", frname);
 		return (TRUE);
 	}
-	ret = (copy(frname, topath) >= 0) ? TRUE : FALSE;
-	if (ret != TRUE)
-		return (ret);
+	if (copy(frname, topath) == FALSE)
+		return (FALSE);
 	if ((bp = refreshbuffer(curbp)) == NULL)
 		return (FALSE);
 
@@ -667,7 +666,7 @@ d_exec(int space, struct buffer *bp, const char *input, const char *cmd, ...)
 	/* Allocate and build the argv. */
 	if ((argv = calloc(n, sizeof(*argv))) == NULL) {
 		dobeep();
-		ewprintf("Can't allocate argv : %s", strerror(errno));
+		ewprintf("Can't allocate argv: %s", strerror(errno));
 		goto out;
 	}
 
@@ -683,13 +682,13 @@ d_exec(int space, struct buffer *bp, const char *input, const char *cmd, ...)
 
 	if ((infd = open(input, O_RDONLY)) == -1) {
 		dobeep();
-		ewprintf("Can't open input file : %s", strerror(errno));
+		ewprintf("Can't open input file: %s", strerror(errno));
 		goto out;
 	}
 
 	if (pipe(fds) == -1) {
 		dobeep();
-		ewprintf("Can't create pipe : %s", strerror(errno));
+		ewprintf("Can't create pipe: %s", strerror(errno));
 		goto out;
 	}
 
@@ -1024,7 +1023,7 @@ redelete(struct buffer *bp)
 
 	for (lp = bfirstlp(bp); lp != bp->b_headp; lp = nlp) {	
 		bp->b_dotp = lp;
-		if ((p = findfname(lp, p)) == NULL) {
+		if ((p = findfname(lp)) == NULL) {
 			nlp = lforw(lp);
 			continue;
 		}
@@ -1077,7 +1076,7 @@ createlist(struct buffer *bp)
 		 * filename can be extracted from it.
 		 */
 		if (((lp->l_text[0] != DDELCHAR)) ||
-		    ((p = findfname(lp, p)) == NULL)) {
+		    ((p = findfname(lp)) == NULL)) {
 			nlp = lforw(lp);
 			continue;
 		}
@@ -1191,7 +1190,7 @@ gotofile(char *fpth)
 	tmp = 0;
 	for (lp = bfirstlp(curbp); lp != curbp->b_headp; lp = nlp) {
 		tmp++;
-		if ((p = findfname(lp, p)) == NULL) {
+		if ((p = findfname(lp)) == NULL) {
 			nlp = lforw(lp);
 			continue;
 		}
@@ -1217,13 +1216,12 @@ gotofile(char *fpth)
  * Look for and extract a file name on a dired buffer line.
  */
 char *
-findfname(struct line *lp, char *fn)
+findfname(struct line *lp)
 {
 	int start;
 
 	(void)d_warpdot(lp, &start);
 	if (start < 1)
 		return NULL;
-	fn = &lp->l_text[start];
-	return fn;
+	return &lp->l_text[start];
 }
